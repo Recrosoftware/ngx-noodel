@@ -1,5 +1,5 @@
 import {Component} from '@angular/core';
-import {NoodelItemContent} from './noodel-item.content';
+import {NoodelItemContent} from './models';
 
 
 @Component({

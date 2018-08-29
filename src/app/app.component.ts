@@ -25,25 +25,27 @@ export class AppComponent {
 
   private readonly sameItem: NoodelItemDescriptor = {
     type: 'test',
-    position: {x: 0, y: 0}
+    position: {x: 0, y: 0},
+    state: {'title': 'Node Title'}
   };
 
   public add(): void {
-    this.noodel.addItem(this.sameItem);
+    this.noodel.add(this.sameItem);
   }
 
   public remove(): void {
-    this.noodel.removeItem(this.sameItem);
+    this.noodel.remove(this.sameItem);
   }
 
   public addNew(): void {
-    this.noodel.addItem({
+    this.noodel.add({
       type: 'test',
-      position: {x: Math.random() * 1000 - 500, y: Math.random() * 1000 - 500}
+      position: {x: Math.random() * 1000 - 500, y: Math.random() * 1000 - 500},
+      state: {'title': 'TestNode'}
     });
   }
 
   public clear(): void {
-    this.noodel.clearItems();
+    this.noodel.clear();
   }
 }

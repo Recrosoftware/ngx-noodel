@@ -1,5 +1,16 @@
-import {AfterViewInit, Component, ElementRef, Input, ViewEncapsulation} from '@angular/core';
-import {NoodelItemDescriptor, ViewProjection} from './models';
+import {
+  AfterViewInit,
+  Component,
+  ComponentFactoryResolver,
+  ComponentRef,
+  ElementRef,
+  Input,
+  Type,
+  ViewChild,
+  ViewContainerRef,
+  ViewEncapsulation
+} from '@angular/core';
+import {NoodelContentTemplate, NoodelItemContent, NoodelItemDescriptor, ViewProjection} from './models';
 
 import {NoodelDefaultItemComponent} from './noodel-default-item.component';
 
@@ -7,6 +18,13 @@ import {NoodelDefaultItemComponent} from './noodel-default-item.component';
 @Component({
   selector: 'div[ngxNoodelItem]',
   template: `
+    <div class="noodel-item-track-bar">
+      {{title}}
+    </div>
+
+    <div>
+      <ng-container #itemContentContainer></ng-container>
+    </div>
     <!--<div #trackBar class="track-bar">
       {{node.title | translate}}
 
@@ -32,10 +50,6 @@ import {NoodelDefaultItemComponent} from './noodel-default-item.component';
                [container]="el" [containerX]="currentX" [containerY]="currentY"></div>
         </li>
       </ul>
-    </div>
-
-    <div class="node-content">
-      <ng-container #customContentContainer></ng-container>
     </div>-->
   `,
   entryComponents: [
@@ -44,22 +58,58 @@ import {NoodelDefaultItemComponent} from './noodel-default-item.component';
   encapsulation: ViewEncapsulation.None
 })
 export class NoodelItemComponent implements AfterViewInit {
+  @ViewChild('itemContentContainer', {read: ViewContainerRef}) public itemContentContainer: ViewContainerRef;
+
   @Input() public item: NoodelItemDescriptor;
   @Input() public parentProjection: ViewProjection;
 
   @Input() public animationDuration: number;
   @Input() public animationFunction: (start: number, end: number, t: number) => number;
 
-  private animationRequestRef: number;
+  @Input() public templates: NoodelContentTemplate[];
 
+  public get title(): string {
+    return this.contentRef ? this.contentRef.instance.title : 'Noodel Item';
+  }
+
+  private contentRef: ComponentRef<NoodelItemContent>;
+  private contentRefType: Type<NoodelItemContent>;
+
+  private animationRequestRef: number;
   private readonly projectionCurrent: ViewProjection;
 
-  constructor(private el: ElementRef) {
+  constructor(private el: ElementRef,
+              private resolver: ComponentFactoryResolver) {
     this.projectionCurrent = {x: 0, y: 0};
   }
 
   public ngAfterViewInit(): void {
     this.render();
+
+    setTimeout(() => this.updateContentTemplate());
+  }
+
+  public updateContentTemplate(): void {
+    if (!this.itemContentContainer) {
+      return;
+    }
+
+    const template = this.templates ? this.templates.find(t => t.itemType === this.item.type) : null;
+    const templateType: Type<NoodelItemContent> = template ? template.component : NoodelDefaultItemComponent;
+
+    if (templateType === this.contentRefType) {
+      return;
+    }
+
+    if (this.contentRef) {
+      this.contentRef.destroy();
+    }
+
+    const factory = this.resolver.resolveComponentFactory(templateType);
+    this.contentRef = this.itemContentContainer.createComponent(factory);
+    this.contentRefType = templateType;
+
+    this.contentRef.instance.item = this.item;
   }
 
   private render(useAnimations: boolean = false): void {

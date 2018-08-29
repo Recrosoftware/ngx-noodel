@@ -6,8 +6,10 @@ import {
   ComponentRef,
   ElementRef,
   Input,
+  OnChanges,
   OnDestroy,
   OnInit,
+  SimpleChanges,
   ViewChild,
   ViewContainerRef,
   ViewEncapsulation
@@ -16,7 +18,7 @@ import {
 import {fromEvent, merge, Observable, Subscription} from 'rxjs';
 import {filter, share, startWith, switchMap, take, takeUntil, tap} from 'rxjs/operators';
 
-import {NoodelItemDescriptor, ViewProjection} from './models';
+import {NoodelContentTemplate, NoodelItemDescriptor, ViewProjection} from './models';
 import {NoodelItemComponent} from './noodel-item.component';
 
 
@@ -46,7 +48,7 @@ function transformLinear(start: number, end: number, t: number): number {
   entryComponents: [NoodelItemComponent],
   encapsulation: ViewEncapsulation.None
 })
-export class NoodelComponent implements OnInit, AfterViewInit, OnDestroy {
+export class NoodelComponent implements OnInit, AfterViewInit, OnChanges, OnDestroy {
   @ViewChild('view', {read: ElementRef})
   public viewElementRef: ElementRef;
 
@@ -55,6 +57,8 @@ export class NoodelComponent implements OnInit, AfterViewInit, OnDestroy {
 
   @Input() public minZoom: number;
   @Input() public maxZoom: number;
+
+  @Input() public templates: NoodelContentTemplate[];
   @Input() public animationDuration: number;
   @Input() public animationFunction: (start: number, end: number, t: number) => number;
 
@@ -160,7 +164,22 @@ export class NoodelComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   public ngAfterViewInit(): void {
-    setTimeout(() => this.render());
+    this.render();
+  }
+
+  public ngOnChanges(changes: SimpleChanges): void {
+    ['animationDuration', 'animationFunction'].forEach(change => {
+      if (change in changes) {
+        this.items.forEach(item => item.ref.instance[change] = this[change]);
+      }
+    });
+
+    if ('templates' in changes) {
+      this.items.forEach(item => {
+        item.ref.instance.templates = this.templates;
+        item.ref.instance.updateContentTemplate();
+      });
+    }
   }
 
   public ngOnDestroy(): void {
@@ -168,7 +187,7 @@ export class NoodelComponent implements OnInit, AfterViewInit, OnDestroy {
     this.zoomSubscription.unsubscribe();
   }
 
-  public addItem(item: NoodelItemDescriptor): void {
+  public add(item: NoodelItemDescriptor): void {
     if (this.items.some(i => i.data === item)) {
       return;
     }
@@ -187,7 +206,7 @@ export class NoodelComponent implements OnInit, AfterViewInit, OnDestroy {
     });
   }
 
-  public removeItem(item: NoodelItemDescriptor): void {
+  public remove(item: NoodelItemDescriptor): void {
     const itemIdx = this.items.findIndex(i => i.data === item);
 
     if (itemIdx < 0) {
@@ -200,7 +219,7 @@ export class NoodelComponent implements OnInit, AfterViewInit, OnDestroy {
     this.items.splice(itemIdx, 1);
   }
 
-  public clearItems(): void {
+  public clear(): void {
     this.containerRef.clear();
     this.items.length = 0;
   }

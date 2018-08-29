@@ -3,6 +3,8 @@
  */
 
 export {
+  NoodelContentTemplate,
+  NoodelItemContent,
   NoodelItemDescriptor
 } from './lib/models';
 
