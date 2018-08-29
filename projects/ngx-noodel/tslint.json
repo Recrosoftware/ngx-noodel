@@ -4,7 +4,10 @@
     "directive-selector": [
       true,
       "attribute",
-      "rs",
+      [
+        "rs",
+        "ngx"
+      ],
       "camelCase"
     ],
     "component-selector": [
@@ -13,10 +16,13 @@
         "element",
         "attribute"
       ],
-      "rs",
       [
-        "kebab-case",
-        "camelCase"
+        "rs",
+        "ngx]",
+        [
+          "kebab-case",
+          "camelCase"
+        ]
       ]
     ]
   }
