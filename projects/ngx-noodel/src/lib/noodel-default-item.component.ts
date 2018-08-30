@@ -1,5 +1,6 @@
 import {Component} from '@angular/core';
-import {NoodelItemContent} from './models';
+
+import {NoodelItemContent} from './shared';
 
 
 @Component({
@@ -7,6 +8,6 @@ import {NoodelItemContent} from './models';
 })
 export class NoodelDefaultItemComponent extends NoodelItemContent {
   public get title(): string {
-    return this.item.state['title'] as string;
+    return this.item.state['title'] as string || 'Missing Node Name';
   }
 }

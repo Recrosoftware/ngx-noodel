@@ -10,16 +10,20 @@ import {
   ViewContainerRef,
   ViewEncapsulation
 } from '@angular/core';
-import {NoodelContentTemplate, NoodelItemContent, NoodelItemDescriptor, ViewProjection} from './models';
+import {Observable} from 'rxjs';
+
+import {METADATA_ACCESSOR, ViewProjection} from './internal';
 
 import {NoodelDefaultItemComponent} from './noodel-default-item.component';
+
+import {NoodelItemContent, NoodelItemDescriptor} from './shared';
 
 
 @Component({
   selector: 'div[ngxNoodelItem]',
   template: `
     <div class="noodel-item-track-bar">
-      {{title}}
+      {{title | async}}
     </div>
 
     <div>
@@ -66,10 +70,10 @@ export class NoodelItemComponent implements AfterViewInit {
   @Input() public animationDuration: number;
   @Input() public animationFunction: (start: number, end: number, t: number) => number;
 
-  @Input() public templates: NoodelContentTemplate[];
+  @Input() public templates: Type<NoodelItemContent>[];
 
-  public get title(): string {
-    return this.contentRef ? this.contentRef.instance.title : 'Noodel Item';
+  public get title(): string | Promise<String> | Observable<string> {
+    return this.contentRef ? this.contentRef.instance.title : '';
   }
 
   private contentRef: ComponentRef<NoodelItemContent>;
@@ -94,8 +98,11 @@ export class NoodelItemComponent implements AfterViewInit {
       return;
     }
 
-    const template = this.templates ? this.templates.find(t => t.itemType === this.item.type) : null;
-    const templateType: Type<NoodelItemContent> = template ? template.component : NoodelDefaultItemComponent;
+    const templateType = (
+      this.templates ?
+        this.templates.find(t => t[METADATA_ACCESSOR].type === this.item.type) :
+        null
+    ) || NoodelDefaultItemComponent;
 
     if (templateType === this.contentRefType) {
       return;

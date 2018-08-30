@@ -19,7 +19,8 @@
     ],
     "paths": {
       "ngx-noodel": [
-        "dist/ngx-noodel"
+        // "dist/ngx-noodel"
+        "projects/ngx-noodel/src/debug" // Development ONLY
       ],
       "ngx-noodel/*": [
         "dist/ngx-noodel/*"

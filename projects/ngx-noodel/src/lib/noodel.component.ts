@@ -10,6 +10,7 @@ import {
   OnDestroy,
   OnInit,
   SimpleChanges,
+  Type,
   ViewChild,
   ViewContainerRef,
   ViewEncapsulation
@@ -18,8 +19,11 @@ import {
 import {fromEvent, merge, Observable, Subscription} from 'rxjs';
 import {filter, share, startWith, switchMap, take, takeUntil, tap} from 'rxjs/operators';
 
-import {NoodelContentTemplate, NoodelItemDescriptor, ViewProjection} from './models';
+import {METADATA_ACCESSOR, NoodelMetadata, validateNoodelContent, ViewProjection} from './internal';
+
 import {NoodelItemComponent} from './noodel-item.component';
+
+import {NoodelItemContent, NoodelItemDescriptor} from './shared';
 
 
 const DEFAULT_ANIMATION_DURATION = 300;
@@ -58,7 +62,7 @@ export class NoodelComponent implements OnInit, AfterViewInit, OnChanges, OnDest
   @Input() public minZoom: number;
   @Input() public maxZoom: number;
 
-  @Input() public templates: NoodelContentTemplate[];
+  @Input() public templates: Type<NoodelItemContent>[];
   @Input() public animationDuration: number;
   @Input() public animationFunction: (start: number, end: number, t: number) => number;
 
@@ -175,6 +179,10 @@ export class NoodelComponent implements OnInit, AfterViewInit, OnChanges, OnDest
     });
 
     if ('templates' in changes) {
+      if (this.templates) {
+        this.templates.forEach(t => validateNoodelContent(t));
+      }
+
       this.items.forEach(item => {
         item.ref.instance.templates = this.templates;
         item.ref.instance.updateContentTemplate();
@@ -187,6 +195,18 @@ export class NoodelComponent implements OnInit, AfterViewInit, OnChanges, OnDest
     this.zoomSubscription.unsubscribe();
   }
 
+  public instantiateFrom(template: Type<any>): void {
+    validateNoodelContent(template);
+
+    if (!this.templates || this.templates.indexOf(template) < 0) {
+      throw new Error('Template not found in local templates');
+    }
+
+    const metadata: NoodelMetadata = template[METADATA_ACCESSOR];
+
+    this.add(metadata.factory());
+  }
+
   public add(item: NoodelItemDescriptor): void {
     if (this.items.some(i => i.data === item)) {
       return;
@@ -197,6 +217,8 @@ export class NoodelComponent implements OnInit, AfterViewInit, OnChanges, OnDest
 
     instance.item = item;
     instance.parentProjection = this.projectionCurrent;
+
+    instance.templates = this.templates;
     instance.animationDuration = this.animationDuration;
     instance.animationFunction = this.animationFunction;
 

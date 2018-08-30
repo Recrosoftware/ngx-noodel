@@ -1,4 +1,6 @@
 import {NgModule} from '@angular/core';
+
+import {AsyncPipe} from './internal';
 import {NoodelDefaultItemComponent} from './noodel-default-item.component';
 
 import {NoodelItemComponent} from './noodel-item.component';
@@ -10,7 +12,9 @@ import {NoodelComponent} from './noodel.component';
     NoodelComponent,
 
     NoodelItemComponent,
-    NoodelDefaultItemComponent
+    NoodelDefaultItemComponent,
+
+    AsyncPipe
   ],
   exports: [NoodelComponent]
 })
