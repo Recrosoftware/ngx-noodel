@@ -1,7 +1,7 @@
 import {NgModule} from '@angular/core';
 import {BrowserModule} from '@angular/platform-browser';
 
-import {NaiscModule} from 'ngx-naisc';
+import {NaiscModule} from '@naisc/core';
 
 import {AppComponent} from './app.component';
 import {TestContentComponent} from './test-content.component';

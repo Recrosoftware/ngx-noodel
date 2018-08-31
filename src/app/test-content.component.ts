@@ -1,5 +1,5 @@
 import {Component} from '@angular/core';
-import {NaiscItem, NaiscItemContent} from 'ngx-naisc';
+import {NaiscItem, NaiscItemContent} from '@naisc/core';
 
 
 @Component({
@@ -9,5 +9,13 @@ import {NaiscItem, NaiscItemContent} from 'ngx-naisc';
 })
 @NaiscItem('test')
 export class TestContentComponent extends NaiscItemContent {
-  public readonly title = 'My Node';
+  private readonly title = 'My Node';
+
+  public getTitle(): string {
+    return this.title;
+  }
+
+  public getPinName(type: 'in' | 'out', idx: number): string {
+    return '';
+  }
 }

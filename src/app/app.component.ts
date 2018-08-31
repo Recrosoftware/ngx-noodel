@@ -1,5 +1,5 @@
 import {Component, ViewChild} from '@angular/core';
-import {NaiscComponent, NaiscItemDescriptor} from 'ngx-naisc';
+import {Naisc, NaiscItemDescriptor} from '@naisc/core';
 import {TestContentComponent} from './test-content.component';
 
 
@@ -24,16 +24,29 @@ import {TestContentComponent} from './test-content.component';
   `]
 })
 export class AppComponent {
-  @ViewChild(NaiscComponent) public naisc: NaiscComponent;
+  @ViewChild(Naisc) public naisc: Naisc;
 
   public templates = [
     TestContentComponent
   ];
 
   private readonly sameItem: NaiscItemDescriptor = {
-    type: 'test',
+    type: 'node01',
+    permanent: false,
     position: {x: 0, y: 0},
-    state: {'title': 'Node Title'}
+    pins: {
+      in: [
+        {
+          'type': 'test',
+          'multiple': true
+        }
+      ],
+      out: []
+    },
+    state: {
+      'title': 'Node Title',
+      'pins-in': ['LinkName']
+    }
   };
 
   public addInstance(): void {
@@ -50,8 +63,13 @@ export class AppComponent {
 
   public addNew(): void {
     this.naisc.add({
-      type: 'test',
+      type: 'node02',
+      permanent: false,
       position: {x: Math.random() * 1000 - 500, y: Math.random() * 1000 - 500},
+      pins: {
+        in: [],
+        out: []
+      },
       state: {'title': 'TestNode'}
     });
   }

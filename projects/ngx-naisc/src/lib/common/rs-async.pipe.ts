@@ -25,8 +25,10 @@ function asObservable<T>(source: Promise<T> | Observable<T>): Observable<T> {
   throw new Error('Invalid source');
 }
 
-@Pipe({name: 'async', pure: false})
-export class AsyncPipe<T> implements PipeTransform, OnDestroy {
+export type RsAsyncInput<T> = T | Promise<T> | Observable<T>;
+
+@Pipe({name: 'rsAsync', pure: false})
+export class RsAsyncPipe<T> implements PipeTransform, OnDestroy {
   private localNext: T;
   private localResult: T;
   private localEmitter: Promise<T> | Observable<T>;
@@ -36,7 +38,7 @@ export class AsyncPipe<T> implements PipeTransform, OnDestroy {
   constructor(private changeDetector: ChangeDetectorRef) {
   }
 
-  public transform(value: T | Promise<T> | Observable<T>): T | WrappedValue {
+  public transform(value: RsAsyncInput<T>): T | WrappedValue {
     if (canSubscribe(value)) {
       if (this.localEmitter !== value) {
         this.localEmitter = value as Promise<T> | Observable<T>;

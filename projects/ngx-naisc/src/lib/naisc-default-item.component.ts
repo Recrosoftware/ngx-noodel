@@ -7,7 +7,11 @@ import {NaiscItemContent} from './shared';
   template: '<!-- No Content -->'
 })
 export class NaiscDefaultItemComponent extends NaiscItemContent {
-  public get title(): string {
-    return this.item.state['title'] as string || 'Missing Node Name';
+  public getTitle(): string {
+    return this.item.state['title'] as string || '** No Title **';
+  }
+
+  public getPinName(type: 'in' | 'out', idx: number): string {
+    return this.item.state[`pins-${type}`] && this.item.state[`pins-${type}`][idx] || '** No Name **';
   }
 }

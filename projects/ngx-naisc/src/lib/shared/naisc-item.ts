@@ -31,7 +31,12 @@ export function NaiscItem(type: string, opts?: Partial<NaiscItemOptions>): TypeD
       factory() {
         return {
           type: type,
+          permanent: false,
           position: {x: 0, y: 0},
+          pins: {
+            in: [],
+            out: []
+          },
           state: {}
         } as NaiscItemDescriptor;
       }

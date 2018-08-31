@@ -1,6 +1,21 @@
 {
   "extends": "../../tslint.json",
   "rules": {
+    "component-selector": [
+      true,
+      [
+        "element",
+        "attribute"
+      ],
+      [
+        "rs",
+        "ngx"
+      ],
+      [
+        "kebab-case",
+        "camelCase"
+      ]
+    ],
     "directive-selector": [
       true,
       "attribute",
@@ -10,20 +25,6 @@
       ],
       "camelCase"
     ],
-    "component-selector": [
-      true,
-      [
-        "element",
-        "attribute"
-      ],
-      [
-        "rs",
-        "ngx]",
-        [
-          "kebab-case",
-          "camelCase"
-        ]
-      ]
-    ]
+    "use-host-property-decorator": false
   }
 }

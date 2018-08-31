@@ -10,8 +10,8 @@ import {
   ViewContainerRef,
   ViewEncapsulation
 } from '@angular/core';
-import {Observable} from 'rxjs';
 
+import {RsAsyncInput} from './common';
 import {METADATA_ACCESSOR, ViewProjection} from './internal';
 
 import {NaiscDefaultItemComponent} from './naisc-default-item.component';
@@ -23,39 +23,39 @@ import {NaiscItemContent, NaiscItemDescriptor} from './shared';
   selector: 'div[ngxNaiscItem]',
   template: `
     <div class="naisc-item-track-bar">
-      {{title | async}}
+      {{getTitle() | rsAsync}}
+      <i *ngIf="!item.permanent" (click)="onRemoveClick($event)"
+         class="naisc-item-close-btn {{removeItemIconClass}}"></i>
     </div>
 
-    <div>
+    <div class="naisc-item-pins">
+      <ul class="naisc-item-pins-in">
+        <li *ngFor="let pin of item.pins.in; let idx = index">
+          <span>{{getPinName('in', idx) | rsAsync}}</span>
+          <div [ngxNaiscItemPin]="pin" [item]="item" type="in"
+               [parentContainer]="el"
+               [parentProjection]="projectionCurrent"
+               [globalProjection]="parentProjection"></div>
+        </li>
+      </ul>
+      <ul class="naisc-item-pins-out">
+        <li *ngFor="let pin of item.pins.out; let idx = index">
+          <span>{{getPinName('out', idx) | rsAsync}}</span>
+          <div [ngxNaiscItemPin]="pin" [item]="item" type="out"
+               [parentContainer]="el"
+               [parentProjection]="projectionCurrent"
+               [globalProjection]="parentProjection"></div>
+        </li>
+      </ul>
+    </div>
+
+    <div class="naisc-item-content">
       <ng-container #itemContentContainer></ng-container>
     </div>
-    <!--<div #trackBar class="track-bar">
-      {{node.title | translate}}
-
-      <i *ngIf="!node.permanent" (click)="remove()"
-         class="remove-button fa fa-fw fa-window-close"></i>
-    </div>
-
-    <div class="link-container">
-      <ul class="link-in">
-        <li *ngFor="let link of node.linkIn">
-          <span>{{link.name | translate}}</span>
-          <div ibNodeLink type="input"
-               [node]="node" [link]="link" [instance]="instance"
-               [container]="el" [containerX]="currentX" [containerY]="currentY"></div>
-        </li>
-      </ul>
-      <ul class="link-out">
-        <li *ngFor="let link of node.linkOut">
-          <span>{{link.name | translate}}</span>
-
-          <div ibNodeLink type="output"
-               [node]="node" [link]="link" [instance]="instance"
-               [container]="el" [containerX]="currentX" [containerY]="currentY"></div>
-        </li>
-      </ul>
-    </div>-->
   `,
+  host: {
+    'class': 'naisc-item'
+  },
   entryComponents: [
     NaiscDefaultItemComponent
   ],
@@ -65,24 +65,22 @@ export class NaiscItemComponent implements AfterViewInit {
   @ViewChild('itemContentContainer', {read: ViewContainerRef}) public itemContentContainer: ViewContainerRef;
 
   @Input() public item: NaiscItemDescriptor;
+
+  @Input() public removeFn: () => void;
   @Input() public parentProjection: ViewProjection;
 
+  @Input() public templates: Type<NaiscItemContent>[];
   @Input() public animationDuration: number;
   @Input() public animationFunction: (start: number, end: number, t: number) => number;
+  @Input() public removeItemIconClass: string;
 
-  @Input() public templates: Type<NaiscItemContent>[];
-
-  public get title(): string | Promise<String> | Observable<string> {
-    return this.contentRef ? this.contentRef.instance.title : '';
-  }
+  public readonly projectionCurrent: ViewProjection;
+  private animationRequestRef: number;
 
   private contentRef: ComponentRef<NaiscItemContent>;
   private contentRefType: Type<NaiscItemContent>;
 
-  private animationRequestRef: number;
-  private readonly projectionCurrent: ViewProjection;
-
-  constructor(private el: ElementRef,
+  constructor(public el: ElementRef,
               private resolver: ComponentFactoryResolver) {
     this.projectionCurrent = {x: 0, y: 0};
   }
@@ -91,6 +89,21 @@ export class NaiscItemComponent implements AfterViewInit {
     this.render();
 
     setTimeout(() => this.updateContentTemplate());
+  }
+
+  public getTitle(): RsAsyncInput<string> {
+    return this.contentRef ? this.contentRef.instance.getTitle() : '';
+  }
+
+  public getPinName(type: 'in' | 'out', index: number): RsAsyncInput<string> {
+    return this.contentRef ? this.contentRef.instance.getPinName(type, index) : '';
+  }
+
+  public onRemoveClick(evt: Event): void {
+    evt.preventDefault();
+    evt.stopPropagation();
+
+    this.removeFn();
   }
 
   public updateContentTemplate(): void {

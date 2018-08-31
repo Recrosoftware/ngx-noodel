@@ -1,3 +1,4 @@
+import {CommonModule} from '@angular/common';
 import {
   AfterViewInit,
   Component,
@@ -6,6 +7,7 @@ import {
   ComponentRef,
   ElementRef,
   Input,
+  NgModule,
   OnChanges,
   OnDestroy,
   OnInit,
@@ -19,8 +21,11 @@ import {
 import {fromEvent, merge, Observable, Subscription} from 'rxjs';
 import {filter, share, startWith, switchMap, take, takeUntil, tap} from 'rxjs/operators';
 
+import {RsAsyncPipe} from './common';
 import {METADATA_ACCESSOR, NaiscMetadata, validateNaiscContent, ViewProjection} from './internal';
 
+import {NaiscDefaultItemComponent} from './naisc-default-item.component';
+import {NaiscItemPinDirective} from './naisc-item-pin.directive';
 import {NaiscItemComponent} from './naisc-item.component';
 
 import {NaiscItemContent, NaiscItemDescriptor} from './shared';
@@ -29,6 +34,8 @@ import {NaiscItemContent, NaiscItemDescriptor} from './shared';
 const DEFAULT_ANIMATION_DURATION = 300;
 const DEFAULT_MIN_ZOOM = .1;
 const DEFAULT_MAX_ZOOM = 10;
+
+const DEFAULT_CLOSE_ICON = 'fa fa-fw fa-window-close';
 
 const BACKGROUND_SIZE = 100;
 
@@ -48,11 +55,15 @@ function transformLinear(start: number, end: number, t: number): number {
       </svg>
     </div>
   `,
-  styleUrls: ['./naisc.component.scss'],
+  styleUrls: ['./naisc.scss'],
+  host: {
+    'class': 'naisc-container'
+  },
   entryComponents: [NaiscItemComponent],
   encapsulation: ViewEncapsulation.None
 })
-export class NaiscComponent implements OnInit, AfterViewInit, OnChanges, OnDestroy {
+/* tslint:disable-next-line:component-class-suffix */
+export class Naisc implements OnInit, AfterViewInit, OnChanges, OnDestroy {
   @ViewChild('view', {read: ElementRef})
   public viewElementRef: ElementRef;
 
@@ -65,6 +76,7 @@ export class NaiscComponent implements OnInit, AfterViewInit, OnChanges, OnDestr
   @Input() public templates: Type<NaiscItemContent>[];
   @Input() public animationDuration: number;
   @Input() public animationFunction: (start: number, end: number, t: number) => number;
+  @Input() public removeItemIconClass: string;
 
   private dragging: boolean;
   private animationRequestRef: number;
@@ -92,10 +104,11 @@ export class NaiscComponent implements OnInit, AfterViewInit, OnChanges, OnDestr
     this.projectionTarget = {x: 0, y: 0, z: 1};
     this.projectionCurrent = {x: 0, y: 0, z: 1};
 
-    this.animationFunction = transformLinear;
     this.minZoom = DEFAULT_MIN_ZOOM;
     this.maxZoom = DEFAULT_MAX_ZOOM;
     this.animationDuration = DEFAULT_ANIMATION_DURATION;
+    this.animationFunction = transformLinear;
+    this.removeItemIconClass = DEFAULT_CLOSE_ICON;
 
     const dBlur = fromEvent<Event>(document, 'blur');
     const dUp = fromEvent<MouseEvent>(document, 'mouseup');
@@ -172,7 +185,11 @@ export class NaiscComponent implements OnInit, AfterViewInit, OnChanges, OnDestr
   }
 
   public ngOnChanges(changes: SimpleChanges): void {
-    ['animationDuration', 'animationFunction'].forEach(change => {
+    [
+      'animationDuration',
+      'animationFunction',
+      'removeItemIconClass'
+    ].forEach(change => {
       if (change in changes) {
         this.items.forEach(item => item.ref.instance[change] = this[change]);
       }
@@ -195,7 +212,7 @@ export class NaiscComponent implements OnInit, AfterViewInit, OnChanges, OnDestr
     this.zoomSubscription.unsubscribe();
   }
 
-  public instantiateFrom(template: Type<any>): void {
+  public instantiateFrom(template: Type<NaiscItemContent>, position?: { x: 0, y: 0 }): void {
     validateNaiscContent(template);
 
     if (!this.templates || this.templates.indexOf(template) < 0) {
@@ -203,8 +220,13 @@ export class NaiscComponent implements OnInit, AfterViewInit, OnChanges, OnDestr
     }
 
     const metadata: NaiscMetadata = template[METADATA_ACCESSOR];
+    const item = metadata.factory();
 
-    this.add(metadata.factory());
+    if (position) {
+      item.position = position;
+    }
+
+    this.add(item);
   }
 
   public add(item: NaiscItemDescriptor): void {
@@ -216,11 +238,13 @@ export class NaiscComponent implements OnInit, AfterViewInit, OnChanges, OnDestr
     const instance = itemRef.instance;
 
     instance.item = item;
+    instance.removeFn = () => this.remove(item);
     instance.parentProjection = this.projectionCurrent;
 
     instance.templates = this.templates;
     instance.animationDuration = this.animationDuration;
     instance.animationFunction = this.animationFunction;
+    instance.removeItemIconClass = this.removeItemIconClass;
 
     this.items.push({
       ref: itemRef,
@@ -322,4 +346,20 @@ export class NaiscComponent implements OnInit, AfterViewInit, OnChanges, OnDestr
       y: pageY - (y + rect.height / 2)
     };
   }
+}
+
+@NgModule({
+  imports: [CommonModule],
+  declarations: [
+    Naisc,
+
+    NaiscItemComponent,
+    NaiscItemPinDirective,
+    NaiscDefaultItemComponent,
+
+    RsAsyncPipe
+  ],
+  exports: [Naisc]
+})
+export class NaiscModule {
 }

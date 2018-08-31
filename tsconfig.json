@@ -18,11 +18,11 @@
       "dom"
     ],
     "paths": {
-      "ngx-naisc": [
+      "@naisc/core": [
         // "dist/ngx-naisc"
-        "projects/ngx-naisc/src/debug" // Development ONLY
+        "projects/ngx-naisc/src/debug"
       ],
-      "ngx-naisc/*": [
+      "@naisc/core/*": [
         "dist/ngx-naisc/*"
       ]
     }
