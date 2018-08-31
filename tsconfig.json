@@ -18,12 +18,12 @@
       "dom"
     ],
     "paths": {
-      "ngx-noodel": [
-        // "dist/ngx-noodel"
-        "projects/ngx-noodel/src/debug" // Development ONLY
+      "ngx-naisc": [
+        // "dist/ngx-naisc"
+        "projects/ngx-naisc/src/debug" // Development ONLY
       ],
-      "ngx-noodel/*": [
-        "dist/ngx-noodel/*"
+      "ngx-naisc/*": [
+        "dist/ngx-naisc/*"
       ]
     }
   }

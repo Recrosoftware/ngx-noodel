@@ -19,11 +19,11 @@ import {
 import {fromEvent, merge, Observable, Subscription} from 'rxjs';
 import {filter, share, startWith, switchMap, take, takeUntil, tap} from 'rxjs/operators';
 
-import {METADATA_ACCESSOR, NoodelMetadata, validateNoodelContent, ViewProjection} from './internal';
+import {METADATA_ACCESSOR, NaiscMetadata, validateNaiscContent, ViewProjection} from './internal';
 
-import {NoodelItemComponent} from './noodel-item.component';
+import {NaiscItemComponent} from './naisc-item.component';
 
-import {NoodelItemContent, NoodelItemDescriptor} from './shared';
+import {NaiscItemContent, NaiscItemDescriptor} from './shared';
 
 
 const DEFAULT_ANIMATION_DURATION = 300;
@@ -37,22 +37,22 @@ function transformLinear(start: number, end: number, t: number): number {
 }
 
 @Component({
-  selector: 'div[ngxNoodel]',
-  exportAs: 'ngxNoodel',
+  selector: 'div[ngxNaisc]',
+  exportAs: 'ngxNaisc',
   template: `
-    <div #view class="noodel-view">
+    <div #view class="naisc-view">
       <ng-container #itemsContainer></ng-container>
 
-      <svg class="noodel-connections">
-        <path class="noodel-connection"></path>
+      <svg class="naisc-connections">
+        <path class="naisc-connection"></path>
       </svg>
     </div>
   `,
-  styleUrls: ['./noodel.component.scss'],
-  entryComponents: [NoodelItemComponent],
+  styleUrls: ['./naisc.component.scss'],
+  entryComponents: [NaiscItemComponent],
   encapsulation: ViewEncapsulation.None
 })
-export class NoodelComponent implements OnInit, AfterViewInit, OnChanges, OnDestroy {
+export class NaiscComponent implements OnInit, AfterViewInit, OnChanges, OnDestroy {
   @ViewChild('view', {read: ElementRef})
   public viewElementRef: ElementRef;
 
@@ -62,7 +62,7 @@ export class NoodelComponent implements OnInit, AfterViewInit, OnChanges, OnDest
   @Input() public minZoom: number;
   @Input() public maxZoom: number;
 
-  @Input() public templates: Type<NoodelItemContent>[];
+  @Input() public templates: Type<NaiscItemContent>[];
   @Input() public animationDuration: number;
   @Input() public animationFunction: (start: number, end: number, t: number) => number;
 
@@ -79,15 +79,15 @@ export class NoodelComponent implements OnInit, AfterViewInit, OnChanges, OnDest
   private readonly projectionCurrent: ViewProjection;
 
   private readonly items: {
-    ref: ComponentRef<NoodelItemComponent>,
-    data: NoodelItemDescriptor
+    ref: ComponentRef<NaiscItemComponent>,
+    data: NaiscItemDescriptor
   }[];
-  private readonly itemFactory: ComponentFactory<NoodelItemComponent>;
+  private readonly itemFactory: ComponentFactory<NaiscItemComponent>;
 
   constructor(private el: ElementRef,
               private resolver: ComponentFactoryResolver) {
     this.items = [];
-    this.itemFactory = this.resolver.resolveComponentFactory(NoodelItemComponent);
+    this.itemFactory = this.resolver.resolveComponentFactory(NaiscItemComponent);
 
     this.projectionTarget = {x: 0, y: 0, z: 1};
     this.projectionCurrent = {x: 0, y: 0, z: 1};
@@ -180,7 +180,7 @@ export class NoodelComponent implements OnInit, AfterViewInit, OnChanges, OnDest
 
     if ('templates' in changes) {
       if (this.templates) {
-        this.templates.forEach(t => validateNoodelContent(t));
+        this.templates.forEach(t => validateNaiscContent(t));
       }
 
       this.items.forEach(item => {
@@ -196,18 +196,18 @@ export class NoodelComponent implements OnInit, AfterViewInit, OnChanges, OnDest
   }
 
   public instantiateFrom(template: Type<any>): void {
-    validateNoodelContent(template);
+    validateNaiscContent(template);
 
     if (!this.templates || this.templates.indexOf(template) < 0) {
       throw new Error('Template not found in local templates');
     }
 
-    const metadata: NoodelMetadata = template[METADATA_ACCESSOR];
+    const metadata: NaiscMetadata = template[METADATA_ACCESSOR];
 
     this.add(metadata.factory());
   }
 
-  public add(item: NoodelItemDescriptor): void {
+  public add(item: NaiscItemDescriptor): void {
     if (this.items.some(i => i.data === item)) {
       return;
     }
@@ -228,7 +228,7 @@ export class NoodelComponent implements OnInit, AfterViewInit, OnChanges, OnDest
     });
   }
 
-  public remove(item: NoodelItemDescriptor): void {
+  public remove(item: NaiscItemDescriptor): void {
     const itemIdx = this.items.findIndex(i => i.data === item);
 
     if (itemIdx < 0) {

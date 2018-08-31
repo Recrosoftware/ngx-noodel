@@ -14,15 +14,15 @@ import {Observable} from 'rxjs';
 
 import {METADATA_ACCESSOR, ViewProjection} from './internal';
 
-import {NoodelDefaultItemComponent} from './noodel-default-item.component';
+import {NaiscDefaultItemComponent} from './naisc-default-item.component';
 
-import {NoodelItemContent, NoodelItemDescriptor} from './shared';
+import {NaiscItemContent, NaiscItemDescriptor} from './shared';
 
 
 @Component({
-  selector: 'div[ngxNoodelItem]',
+  selector: 'div[ngxNaiscItem]',
   template: `
-    <div class="noodel-item-track-bar">
+    <div class="naisc-item-track-bar">
       {{title | async}}
     </div>
 
@@ -57,27 +57,27 @@ import {NoodelItemContent, NoodelItemDescriptor} from './shared';
     </div>-->
   `,
   entryComponents: [
-    NoodelDefaultItemComponent
+    NaiscDefaultItemComponent
   ],
   encapsulation: ViewEncapsulation.None
 })
-export class NoodelItemComponent implements AfterViewInit {
+export class NaiscItemComponent implements AfterViewInit {
   @ViewChild('itemContentContainer', {read: ViewContainerRef}) public itemContentContainer: ViewContainerRef;
 
-  @Input() public item: NoodelItemDescriptor;
+  @Input() public item: NaiscItemDescriptor;
   @Input() public parentProjection: ViewProjection;
 
   @Input() public animationDuration: number;
   @Input() public animationFunction: (start: number, end: number, t: number) => number;
 
-  @Input() public templates: Type<NoodelItemContent>[];
+  @Input() public templates: Type<NaiscItemContent>[];
 
   public get title(): string | Promise<String> | Observable<string> {
     return this.contentRef ? this.contentRef.instance.title : '';
   }
 
-  private contentRef: ComponentRef<NoodelItemContent>;
-  private contentRefType: Type<NoodelItemContent>;
+  private contentRef: ComponentRef<NaiscItemContent>;
+  private contentRefType: Type<NaiscItemContent>;
 
   private animationRequestRef: number;
   private readonly projectionCurrent: ViewProjection;
@@ -102,7 +102,7 @@ export class NoodelItemComponent implements AfterViewInit {
       this.templates ?
         this.templates.find(t => t[METADATA_ACCESSOR].type === this.item.type) :
         null
-    ) || NoodelDefaultItemComponent;
+    ) || NaiscDefaultItemComponent;
 
     if (templateType === this.contentRefType) {
       return;

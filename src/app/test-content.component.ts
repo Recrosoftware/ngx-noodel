@@ -1,5 +1,5 @@
 import {Component} from '@angular/core';
-import {NoodelItem, NoodelItemContent} from 'ngx-noodel';
+import {NaiscItem, NaiscItemContent} from 'ngx-naisc';
 
 
 @Component({
@@ -7,7 +7,7 @@ import {NoodelItem, NoodelItemContent} from 'ngx-noodel';
     Hello World
   `
 })
-@NoodelItem('test')
-export class TestContentComponent extends NoodelItemContent {
+@NaiscItem('test')
+export class TestContentComponent extends NaiscItemContent {
   public readonly title = 'My Node';
 }

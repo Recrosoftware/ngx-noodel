@@ -1,4 +1,4 @@
-export interface NoodelItemDescriptor {
+export interface NaiscItemDescriptor {
   type: string;
   position: { x: number, y: number };
 

@@ -1,3 +1,3 @@
 export * from './async.pipe';
-export * from './noodel-metadata';
+export * from './naisc-metadata';
 export * from './view-projection';

@@ -1,7 +1,7 @@
 import {NgModule} from '@angular/core';
 import {BrowserModule} from '@angular/platform-browser';
 
-import {NoodelModule} from 'ngx-noodel';
+import {NaiscModule} from 'ngx-naisc';
 
 import {AppComponent} from './app.component';
 import {TestContentComponent} from './test-content.component';
@@ -18,7 +18,7 @@ import {TestContentComponent} from './test-content.component';
   ],
   imports: [
     BrowserModule,
-    NoodelModule
+    NaiscModule
   ],
   providers: [],
   bootstrap: [AppComponent]
