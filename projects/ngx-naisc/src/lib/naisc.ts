@@ -1,4 +1,3 @@
-import {CommonModule} from '@angular/common';
 import {
   AfterViewInit,
   Component,
@@ -7,7 +6,6 @@ import {
   ComponentRef,
   ElementRef,
   Input,
-  NgModule,
   OnChanges,
   OnDestroy,
   OnInit,
@@ -21,14 +19,14 @@ import {
 import {fromEvent, merge, Observable, Subscription} from 'rxjs';
 import {filter, share, startWith, switchMap, take, takeUntil, tap} from 'rxjs/operators';
 
-import {RsAsyncPipe} from './common';
-import {METADATA_ACCESSOR, NaiscMetadata, validateNaiscContent, ViewProjection} from './internal';
-
-import {NaiscDefaultItemComponent} from './naisc-default-item.component';
-import {NaiscItemPinDirective} from './naisc-item-pin.directive';
+import {NaiscMetadata} from './internal/naisc-metadata';
+import {NAISC_METADATA_ACCESSOR} from './internal/symbols';
+import {validateNaiscContent} from './internal/validators';
+import {ViewProjection} from './internal/view-projection';
 import {NaiscItemComponent} from './naisc-item.component';
 
-import {NaiscItemContent, NaiscItemDescriptor} from './shared';
+import {NaiscItemContent} from './shared/naisc-item-content';
+import {NaiscItemDescriptor} from './shared/naisc-item-descriptor';
 
 
 const DEFAULT_ANIMATION_DURATION = 300;
@@ -44,8 +42,8 @@ function transformLinear(start: number, end: number, t: number): number {
 }
 
 @Component({
-  selector: 'div[ngxNaisc]',
-  exportAs: 'ngxNaisc',
+  selector: 'div[naisc]',
+  exportAs: 'naisc',
   template: `
     <div #view class="naisc-view">
       <ng-container #itemsContainer></ng-container>
@@ -167,7 +165,7 @@ export class Naisc implements OnInit, AfterViewInit, OnChanges, OnDestroy {
       evt.stopPropagation();
 
       const deltaZoom = -evt.deltaY * .01;
-      const {x, y} = this.getContainerCoordinates(evt);
+      const {x, y} = this.getMousePositionInContainer(evt);
 
       const newZoom = Math.max(this.minZoom, Math.min(this.maxZoom, this.projectionTarget.z + deltaZoom));
       const zoomAspect = newZoom / this.projectionTarget.z;
@@ -212,21 +210,24 @@ export class Naisc implements OnInit, AfterViewInit, OnChanges, OnDestroy {
     this.zoomSubscription.unsubscribe();
   }
 
-  public instantiateFrom(template: Type<NaiscItemContent>, position?: { x: 0, y: 0 }): void {
+  public instantiateFrom(template: Type<NaiscItemContent>, position?: { x: 0, y: 0 }): NaiscItemDescriptor {
     validateNaiscContent(template);
 
     if (!this.templates || this.templates.indexOf(template) < 0) {
       throw new Error('Template not found in local templates');
     }
 
-    const metadata: NaiscMetadata = template[METADATA_ACCESSOR];
+    const metadata: NaiscMetadata = template[NAISC_METADATA_ACCESSOR];
     const item = metadata.factory();
 
     if (position) {
-      item.position = position;
+      item.position.x = position.x;
+      item.position.y = position.y;
     }
 
     this.add(item);
+
+    return item;
   }
 
   public add(item: NaiscItemDescriptor): void {
@@ -268,6 +269,13 @@ export class Naisc implements OnInit, AfterViewInit, OnChanges, OnDestroy {
   public clear(): void {
     this.containerRef.clear();
     this.items.length = 0;
+  }
+
+  public requestRender(useAnimations: boolean = true): void {
+    setTimeout(() => {
+      this.render(useAnimations);
+      this.items.forEach(i => i.ref.instance.render(useAnimations));
+    });
   }
 
   private render(useAnimation: boolean = true): void {
@@ -327,7 +335,7 @@ export class Naisc implements OnInit, AfterViewInit, OnChanges, OnDestroy {
     }
   }
 
-  private getContainerCoordinates({pageX, pageY}: MouseEvent) {
+  private getMousePositionInContainer({pageX, pageY}: MouseEvent) {
     const c = this.el.nativeElement as HTMLDivElement;
 
     if (typeof c.getBoundingClientRect !== 'function') {
@@ -346,20 +354,4 @@ export class Naisc implements OnInit, AfterViewInit, OnChanges, OnDestroy {
       y: pageY - (y + rect.height / 2)
     };
   }
-}
-
-@NgModule({
-  imports: [CommonModule],
-  declarations: [
-    Naisc,
-
-    NaiscItemComponent,
-    NaiscItemPinDirective,
-    NaiscDefaultItemComponent,
-
-    RsAsyncPipe
-  ],
-  exports: [Naisc]
-})
-export class NaiscModule {
 }

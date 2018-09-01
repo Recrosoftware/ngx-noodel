@@ -1,6 +1,6 @@
 import {Component} from '@angular/core';
 
-import {NaiscItemContent} from './shared';
+import {NaiscItemContent} from './shared/naisc-item-content';
 
 
 @Component({
@@ -11,7 +11,11 @@ export class NaiscDefaultItemComponent extends NaiscItemContent {
     return this.item.state['title'] as string || '** No Title **';
   }
 
-  public getPinName(type: 'in' | 'out', idx: number): string {
-    return this.item.state[`pins-${type}`] && this.item.state[`pins-${type}`][idx] || '** No Name **';
+  getInputPinName(idx: number): string {
+    return this.item.state['pins-in'] && this.item.state['pins-in'][idx] || '** No Name **';
+  }
+
+  getOutputPinName(idx: number): string {
+    return this.item.state['pins-out'] && this.item.state['pins-out'][idx] || '** No Name **';
   }
 }

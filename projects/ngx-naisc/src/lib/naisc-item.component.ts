@@ -12,15 +12,17 @@ import {
 } from '@angular/core';
 
 import {RsAsyncInput} from './common';
-import {METADATA_ACCESSOR, ViewProjection} from './internal';
+import {NaiscType} from './internal/naisc-type';
+import {NAISC_METADATA_ACCESSOR} from './internal/symbols';
+import {ViewProjection} from './internal/view-projection';
 
 import {NaiscDefaultItemComponent} from './naisc-default-item.component';
-
-import {NaiscItemContent, NaiscItemDescriptor} from './shared';
+import {NaiscItemContent} from './shared/naisc-item-content';
+import {NaiscItemDescriptor} from './shared/naisc-item-descriptor';
 
 
 @Component({
-  selector: 'div[ngxNaiscItem]',
+  selector: 'div[naiscItem]',
   template: `
     <div class="naisc-item-track-bar">
       {{getTitle() | rsAsync}}
@@ -31,8 +33,8 @@ import {NaiscItemContent, NaiscItemDescriptor} from './shared';
     <div class="naisc-item-pins">
       <ul class="naisc-item-pins-in">
         <li *ngFor="let pin of item.pins.in; let idx = index">
-          <span>{{getPinName('in', idx) | rsAsync}}</span>
-          <div [ngxNaiscItemPin]="pin" [item]="item" type="in"
+          <span>{{getInputPinName(idx) | rsAsync}}</span>
+          <div [naiscItemPin]="pin" [item]="item" type="in"
                [parentContainer]="el"
                [parentProjection]="projectionCurrent"
                [globalProjection]="parentProjection"></div>
@@ -40,8 +42,8 @@ import {NaiscItemContent, NaiscItemDescriptor} from './shared';
       </ul>
       <ul class="naisc-item-pins-out">
         <li *ngFor="let pin of item.pins.out; let idx = index">
-          <span>{{getPinName('out', idx) | rsAsync}}</span>
-          <div [ngxNaiscItemPin]="pin" [item]="item" type="out"
+          <span>{{getOutputPinName(idx) | rsAsync}}</span>
+          <div [naiscItemPin]="pin" [item]="item" type="out"
                [parentContainer]="el"
                [parentProjection]="projectionCurrent"
                [globalProjection]="parentProjection"></div>
@@ -69,7 +71,7 @@ export class NaiscItemComponent implements AfterViewInit {
   @Input() public removeFn: () => void;
   @Input() public parentProjection: ViewProjection;
 
-  @Input() public templates: Type<NaiscItemContent>[];
+  @Input() public templates: NaiscType[];
   @Input() public animationDuration: number;
   @Input() public animationFunction: (start: number, end: number, t: number) => number;
   @Input() public removeItemIconClass: string;
@@ -78,7 +80,7 @@ export class NaiscItemComponent implements AfterViewInit {
   private animationRequestRef: number;
 
   private contentRef: ComponentRef<NaiscItemContent>;
-  private contentRefType: Type<NaiscItemContent>;
+  private contentRefType: NaiscType;
 
   constructor(public el: ElementRef,
               private resolver: ComponentFactoryResolver) {
@@ -95,8 +97,11 @@ export class NaiscItemComponent implements AfterViewInit {
     return this.contentRef ? this.contentRef.instance.getTitle() : '';
   }
 
-  public getPinName(type: 'in' | 'out', index: number): RsAsyncInput<string> {
-    return this.contentRef ? this.contentRef.instance.getPinName(type, index) : '';
+  public getInputPinName(index: number): RsAsyncInput<string> {
+    return this.contentRef ? this.contentRef.instance.getInputPinName(index) : '';
+  }
+  public getOutputPinName(index: number): RsAsyncInput<string> {
+    return this.contentRef ? this.contentRef.instance.getOutputPinName(index) : '';
   }
 
   public onRemoveClick(evt: Event): void {
@@ -111,9 +116,10 @@ export class NaiscItemComponent implements AfterViewInit {
       return;
     }
 
-    const templateType = (
+    const templateType: Type<NaiscItemContent> = (
       this.templates ?
-        this.templates.find(t => t[METADATA_ACCESSOR].type === this.item.type) :
+        this.templates
+          .find(t => t[NAISC_METADATA_ACCESSOR].type === this.item.type) as any :
         null
     ) || NaiscDefaultItemComponent;
 
@@ -132,7 +138,7 @@ export class NaiscItemComponent implements AfterViewInit {
     this.contentRef.instance.item = this.item;
   }
 
-  private render(useAnimations: boolean = false): void {
+  public render(useAnimations: boolean = false): void {
     useAnimations = useAnimations && typeof window.requestAnimationFrame === 'function';
 
     const c = this.el.nativeElement as HTMLDivElement;

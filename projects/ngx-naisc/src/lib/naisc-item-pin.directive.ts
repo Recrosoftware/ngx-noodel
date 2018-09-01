@@ -1,10 +1,10 @@
 import {AfterViewInit, Directive, ElementRef, Input} from '@angular/core';
-import {ViewProjection} from './internal';
-import {NaiscItemDescriptor, NaiscPinDescriptor} from './shared';
+import {ViewProjection} from './internal/view-projection';
+import {NaiscItemDescriptor, NaiscPinDescriptor} from './shared/naisc-item-descriptor';
 
 
 @Directive({
-  selector: 'div[ngxNaiscItemPin]',
+  selector: 'div[naiscItemPin]',
   host: {
     'class': 'naisc-item-pin',
     '[class.multi]': 'pin.multiple',
@@ -17,7 +17,7 @@ import {NaiscItemDescriptor, NaiscPinDescriptor} from './shared';
 })
 export class NaiscItemPinDirective implements AfterViewInit {
   /* tslint:disable-next-line:no-input-rename */
-  @Input('ngxNaiscItemPin') public pin: NaiscPinDescriptor;
+  @Input('naiscItemPin') public pin: NaiscPinDescriptor;
   @Input() public item: NaiscItemDescriptor;
   @Input() public type: 'in' | 'out';
 
@@ -39,15 +39,21 @@ export class NaiscItemPinDirective implements AfterViewInit {
   public onMouseDown(evt: MouseEvent): void {
     evt.preventDefault();
     evt.stopPropagation();
+
+    // TODO
   }
 
   public onMouseUp(evt: MouseEvent): void {
     evt.preventDefault();
     evt.stopPropagation();
+
+    // TODO
   }
 
   public onClick(evt: MouseEvent): void {
     evt.preventDefault();
     evt.stopPropagation();
+
+    // TODO
   }
 }

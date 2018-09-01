@@ -1,15 +1,15 @@
 export interface NaiscItemDescriptor {
-  type: string;
-  permanent: boolean;
-  position: {
+  readonly type: string;
+  readonly permanent: boolean;
+  readonly position: {
     x: number;
     y: number;
   };
-  pins: {
-    in: NaiscPinDescriptor[];
-    out: NaiscPinDescriptor[];
+  readonly pins: {
+    readonly in: NaiscPinDescriptor[];
+    readonly out: NaiscPinDescriptor[];
   };
-  state: {
+  readonly state: {
     [key: string]: string | number | boolean | string[] | number[] | boolean[];
   };
 }

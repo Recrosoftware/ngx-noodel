@@ -7,10 +7,7 @@
         "element",
         "attribute"
       ],
-      [
-        "rs",
-        "ngx"
-      ],
+      "naisc",
       [
         "kebab-case",
         "camelCase"
@@ -19,10 +16,7 @@
     "directive-selector": [
       true,
       "attribute",
-      [
-        "rs",
-        "ngx"
-      ],
+      "naisc",
       "camelCase"
     ],
     "use-host-property-decorator": false

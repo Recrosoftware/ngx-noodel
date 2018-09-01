@@ -9,5 +9,6 @@ export abstract class NaiscItemContent {
 
   public abstract getTitle(): string | Promise<string> | Observable<string>;
 
-  public abstract getPinName(type: 'in' | 'out', idx: number): string | Promise<string> | Observable<string>;
+  public abstract getInputPinName(idx: number): string | Promise<string> | Observable<string>;
+  public abstract getOutputPinName(idx: number): string | Promise<string> | Observable<string>;
 }

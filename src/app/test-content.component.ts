@@ -7,7 +7,14 @@ import {NaiscItem, NaiscItemContent} from '@naisc/core';
     Hello World
   `
 })
-@NaiscItem('test')
+@NaiscItem('test', {
+  inputPins: [
+    {type: 'a', multiple: true}
+  ],
+  outputPins: [
+    {type: 'a', multiple: false}
+  ]
+})
 export class TestContentComponent extends NaiscItemContent {
   private readonly title = 'My Node';
 
@@ -15,7 +22,11 @@ export class TestContentComponent extends NaiscItemContent {
     return this.title;
   }
 
-  public getPinName(type: 'in' | 'out', idx: number): string {
-    return '';
+  public getInputPinName(idx: number): string {
+    return 'Generic input';
+  }
+
+  public getOutputPinName(idx: number): string {
+    return 'Generic output';
   }
 }
