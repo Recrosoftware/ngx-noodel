@@ -16,9 +16,10 @@ import {
   ViewEncapsulation
 } from '@angular/core';
 
-import {fromEvent, merge, Observable, Subscription} from 'rxjs';
+import {fromEvent, merge, Observable, Subject, Subscription} from 'rxjs';
 import {filter, share, startWith, switchMap, take, takeUntil, tap} from 'rxjs/operators';
 
+import {NaiscLinkEvent} from './internal/naisc-link-event';
 import {NaiscMetadata} from './internal/naisc-metadata';
 import {NAISC_METADATA_ACCESSOR} from './internal/symbols';
 import {validateNaiscContent} from './internal/validators';
@@ -26,12 +27,13 @@ import {ViewProjection} from './internal/view-projection';
 import {NaiscItemComponent} from './naisc-item.component';
 
 import {NaiscItemContent} from './shared/naisc-item-content';
-import {NaiscItemDescriptor} from './shared/naisc-item-descriptor';
+import {NaiscItemDescriptor, NaiscPinDescriptor} from './shared/naisc-item-descriptor';
 
 
+const DEFAULT_SNAP = true;
 const DEFAULT_ANIMATION_DURATION = 300;
-const DEFAULT_MIN_ZOOM = .1;
-const DEFAULT_MAX_ZOOM = 10;
+const DEFAULT_MIN_ZOOM = .2;
+const DEFAULT_MAX_ZOOM = 5;
 
 const DEFAULT_CLOSE_ICON = 'fa fa-fw fa-window-close';
 
@@ -49,7 +51,8 @@ function transformLinear(start: number, end: number, t: number): number {
       <ng-container #itemsContainer></ng-container>
 
       <svg class="naisc-connections">
-        <path class="naisc-connection"></path>
+        <path *ngIf="linkingRef" class="naisc-connection" naiscItemLink
+              [sourcePin]="linkingRef.pin" [targetPosition]="linkingRef.target"></path>
       </svg>
     </div>
   `,
@@ -68,6 +71,7 @@ export class Naisc implements OnInit, AfterViewInit, OnChanges, OnDestroy {
   @ViewChild('itemsContainer', {read: ViewContainerRef})
   public containerRef: ViewContainerRef;
 
+  @Input() public snap: boolean;
   @Input() public minZoom: number;
   @Input() public maxZoom: number;
 
@@ -76,21 +80,33 @@ export class Naisc implements OnInit, AfterViewInit, OnChanges, OnDestroy {
   @Input() public animationFunction: (start: number, end: number, t: number) => number;
   @Input() public removeItemIconClass: string;
 
+  public linkingRef: {
+    item: NaiscItemDescriptor;
+    pin: NaiscPinDescriptor;
+
+    target: ViewProjection;
+  };
+
   private dragging: boolean;
   private animationRequestRef: number;
 
   private dragSubscription = Subscription.EMPTY;
   private zoomSubscription = Subscription.EMPTY;
+  private linkSubscription = Subscription.EMPTY;
 
   private readonly onDrag: Observable<MouseEvent>;
+  private readonly onMove: Observable<MouseEvent>;
   private readonly onZoom: Observable<WheelEvent>;
+  private readonly onActionEnd: Observable<Event>;
+
+  private readonly linkEvents: Subject<NaiscLinkEvent>;
 
   private readonly projectionTarget: ViewProjection;
   private readonly projectionCurrent: ViewProjection;
 
   private readonly items: {
-    ref: ComponentRef<NaiscItemComponent>,
-    data: NaiscItemDescriptor
+    ref: ComponentRef<NaiscItemComponent>;
+    data: NaiscItemDescriptor;
   }[];
   private readonly itemFactory: ComponentFactory<NaiscItemComponent>;
 
@@ -102,6 +118,11 @@ export class Naisc implements OnInit, AfterViewInit, OnChanges, OnDestroy {
     this.projectionTarget = {x: 0, y: 0, z: 1};
     this.projectionCurrent = {x: 0, y: 0, z: 1};
 
+    this.linkEvents = new Subject();
+
+    this.linkEvents.subscribe(e => console.log(e)); // TODO: Delete
+
+    this.snap = DEFAULT_SNAP;
     this.minZoom = DEFAULT_MIN_ZOOM;
     this.maxZoom = DEFAULT_MAX_ZOOM;
     this.animationDuration = DEFAULT_ANIMATION_DURATION;
@@ -111,7 +132,12 @@ export class Naisc implements OnInit, AfterViewInit, OnChanges, OnDestroy {
     const dBlur = fromEvent<Event>(document, 'blur');
     const dUp = fromEvent<MouseEvent>(document, 'mouseup');
 
-    const cMove = fromEvent<MouseEvent>(this.el.nativeElement, 'mousemove');
+    this.onActionEnd = merge(dBlur, dUp).pipe(
+      share(),
+      take(1)
+    );
+
+    const cMove = fromEvent<MouseEvent>(this.el.nativeElement, 'mousemove').pipe(share());
     const cDown = fromEvent<MouseEvent>(this.el.nativeElement, 'mousedown');
     const cDrag = cDown.pipe(
       filter(down => down.button === 0), // Left Click
@@ -119,8 +145,7 @@ export class Naisc implements OnInit, AfterViewInit, OnChanges, OnDestroy {
         tap(() => this.dragging = true),
         startWith(down),
         takeUntil(
-          merge(dUp, dBlur).pipe(
-            take(1),
+          this.onActionEnd.pipe(
             tap(() => this.dragging = false)
           )
         )
@@ -131,6 +156,7 @@ export class Naisc implements OnInit, AfterViewInit, OnChanges, OnDestroy {
 
     this.onDrag = cDrag;
     this.onZoom = cZoom;
+    this.onMove = cMove;
   }
 
   public ngOnInit(): void {
@@ -208,6 +234,7 @@ export class Naisc implements OnInit, AfterViewInit, OnChanges, OnDestroy {
   public ngOnDestroy(): void {
     this.dragSubscription.unsubscribe();
     this.zoomSubscription.unsubscribe();
+    this.linkSubscription.unsubscribe();
   }
 
   public instantiateFrom(template: Type<NaiscItemContent>, position?: { x: 0, y: 0 }): NaiscItemDescriptor {
@@ -239,9 +266,15 @@ export class Naisc implements OnInit, AfterViewInit, OnChanges, OnDestroy {
     const instance = itemRef.instance;
 
     instance.item = item;
+
     instance.removeFn = () => this.remove(item);
+    instance.onLink = (a, p) => this.onLink(a, item, p);
+    instance.linkEvents = this.linkEvents;
+    instance.onMove = this.onMove;
+    instance.onActionEnd = this.onActionEnd;
     instance.parentProjection = this.projectionCurrent;
 
+    instance.snap = this.snap;
     instance.templates = this.templates;
     instance.animationDuration = this.animationDuration;
     instance.animationFunction = this.animationFunction;
@@ -274,8 +307,46 @@ export class Naisc implements OnInit, AfterViewInit, OnChanges, OnDestroy {
   public requestRender(useAnimations: boolean = true): void {
     setTimeout(() => {
       this.render(useAnimations);
-      this.items.forEach(i => i.ref.instance.render(useAnimations));
+      this.items.forEach(i => i.ref.instance.render(useAnimations, true));
     });
+  }
+
+  private onLink(action: 'start' | 'end' | 'remove', item: NaiscItemDescriptor, pin: NaiscPinDescriptor): void {
+    switch (action) {
+      case 'start':
+        this.linkEvents.next({
+          actionType: 'start',
+          ref: {
+            item: item,
+            pin: pin
+          }
+        });
+
+        this.linkingRef = {
+          item: item,
+          pin: pin,
+          target: null
+        };
+
+        this.linkSubscription.unsubscribe();
+        this.linkSubscription = this.onMove.pipe(
+          takeUntil(this.onActionEnd.pipe(tap(() => {
+            this.linkingRef = null;
+            this.linkEvents.next({actionType: 'end'});
+          })))
+        ).subscribe(evt => {
+          if (!this.linkingRef) {
+            this.linkSubscription.unsubscribe();
+            return;
+          }
+          this.linkingRef.target = this.getLocalPosition(this.getMousePositionInContainer(evt));
+        });
+        break;
+      case 'end':
+        this.linkSubscription.unsubscribe();
+        this.linkEvents.next({actionType: 'end'});
+        break;
+    }
   }
 
   private render(useAnimation: boolean = true): void {
@@ -352,6 +423,13 @@ export class Naisc implements OnInit, AfterViewInit, OnChanges, OnDestroy {
     return {
       x: pageX - (x + rect.width / 2),
       y: pageY - (y + rect.height / 2)
+    };
+  }
+
+  private getLocalPosition({x, y}: { x: number, y: number }) {
+    return {
+      x: (x - this.projectionTarget.x) / this.projectionTarget.z,
+      y: (y - this.projectionTarget.y) / this.projectionTarget.z
     };
   }
 }

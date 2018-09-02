@@ -38,6 +38,7 @@
       z-index: -1;
 
       path.naisc-connection {
+        fill: none;
         stroke-width: 3px;
         stroke-linecap: round;
       }
@@ -100,6 +101,12 @@
       & > li {
         position: relative;
 
+        & > span {
+          white-space: nowrap;
+          text-overflow: ellipsis;
+          -ms-text-overflow: ellipsis;
+        }
+
         & > .naisc-item-pin {
           position: absolute;
 
@@ -138,6 +145,7 @@
         & > span {
           text-align: left;
           margin-left: 8px;
+          margin-right: 4px;
         }
         & > .naisc-item-pin {
           left: 0;
@@ -151,6 +159,7 @@
         & > span {
           text-align: right;
           margin-right: 8px;
+          margin-left: 4px;
         }
         & > .naisc-item-pin {
           right: 0;

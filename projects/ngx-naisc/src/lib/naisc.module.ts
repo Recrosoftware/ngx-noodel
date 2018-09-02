@@ -1,8 +1,12 @@
 import {CommonModule} from '@angular/common';
 import {NgModule} from '@angular/core';
+
 import {RsAsyncPipe} from './common';
+
 import {Naisc} from './naisc';
+
 import {NaiscDefaultItemComponent} from './naisc-default-item.component';
+import {NaiscItemLinkDirective} from './naisc-item-link.directive';
 import {NaiscItemPinDirective} from './naisc-item-pin.directive';
 import {NaiscItemComponent} from './naisc-item.component';
 
@@ -13,6 +17,7 @@ import {NaiscItemComponent} from './naisc-item.component';
     Naisc,
 
     NaiscItemComponent,
+    NaiscItemLinkDirective,
     NaiscItemPinDirective,
     NaiscDefaultItemComponent,
 
