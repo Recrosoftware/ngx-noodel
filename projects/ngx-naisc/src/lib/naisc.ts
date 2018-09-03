@@ -1,9 +1,9 @@
 import {
   AfterViewInit,
+  ChangeDetectorRef,
   Component,
   ComponentFactory,
   ComponentFactoryResolver,
-  ComponentRef,
   ElementRef,
   Input,
   OnChanges,
@@ -18,12 +18,17 @@ import {
 
 import {fromEvent, merge, Observable, Subject, Subscription} from 'rxjs';
 import {filter, share, startWith, switchMap, take, takeUntil, tap} from 'rxjs/operators';
+import {validateNaiscContent} from './internal/functions';
 
-import {NaiscLinkEvent} from './internal/naisc-link-event';
-import {NaiscMetadata} from './internal/naisc-metadata';
+import {
+  NaiscItemInstanceRef,
+  NaiscItemLink,
+  NaiscItemLinkRef,
+  NaiscLinkEvent,
+  NaiscMetadata,
+  ViewProjection
+} from './internal/models';
 import {NAISC_METADATA_ACCESSOR} from './internal/symbols';
-import {validateNaiscContent} from './internal/validators';
-import {ViewProjection} from './internal/view-projection';
 import {NaiscItemComponent} from './naisc-item.component';
 
 import {NaiscItemContent} from './shared/naisc-item-content';
@@ -50,9 +55,12 @@ function transformLinear(start: number, end: number, t: number): number {
     <div #view class="naisc-view">
       <ng-container #itemsContainer></ng-container>
 
-      <svg class="naisc-connections">
-        <path *ngIf="linkingRef" class="naisc-connection" naiscItemLink
+      <svg class="naisc-links">
+        <path *ngIf="linkingRef" class="naisc-link naisc-temporary-link" naiscItemLink
               [sourcePin]="linkingRef.pin" [targetPosition]="linkingRef.target"></path>
+
+        <path *ngFor="let link of links" class="naisc-link" naiscItemLink
+              [sourcePin]="link.from.pin" [targetPin]="link.to.pin"></path>
       </svg>
     </div>
   `,
@@ -80,12 +88,8 @@ export class Naisc implements OnInit, AfterViewInit, OnChanges, OnDestroy {
   @Input() public animationFunction: (start: number, end: number, t: number) => number;
   @Input() public removeItemIconClass: string;
 
-  public linkingRef: {
-    item: NaiscItemDescriptor;
-    pin: NaiscPinDescriptor;
-
-    target: ViewProjection;
-  };
+  public linkingRef: NaiscItemLinkRef & { target: ViewProjection };
+  public links: NaiscItemLink[] = [];
 
   private dragging: boolean;
   private animationRequestRef: number;
@@ -104,13 +108,11 @@ export class Naisc implements OnInit, AfterViewInit, OnChanges, OnDestroy {
   private readonly projectionTarget: ViewProjection;
   private readonly projectionCurrent: ViewProjection;
 
-  private readonly items: {
-    ref: ComponentRef<NaiscItemComponent>;
-    data: NaiscItemDescriptor;
-  }[];
+  private readonly items: NaiscItemInstanceRef[];
   private readonly itemFactory: ComponentFactory<NaiscItemComponent>;
 
   constructor(private el: ElementRef,
+              private changeDetector: ChangeDetectorRef,
               private resolver: ComponentFactoryResolver) {
     this.items = [];
     this.itemFactory = this.resolver.resolveComponentFactory(NaiscItemComponent);
@@ -293,6 +295,9 @@ export class Naisc implements OnInit, AfterViewInit, OnChanges, OnDestroy {
       return;
     }
 
+    item.pins.in.forEach(p => this.removeLink(p));
+    item.pins.out.forEach(p => this.removeLink(p));
+
     const itemRef = this.items[itemIdx].ref;
     itemRef.destroy();
 
@@ -302,12 +307,15 @@ export class Naisc implements OnInit, AfterViewInit, OnChanges, OnDestroy {
   public clear(): void {
     this.containerRef.clear();
     this.items.length = 0;
+    this.links = [];
   }
 
   public requestRender(useAnimations: boolean = true): void {
     setTimeout(() => {
       this.render(useAnimations);
       this.items.forEach(i => i.ref.instance.render(useAnimations, true));
+
+      this.changeDetector.markForCheck();
     });
   }
 
@@ -343,10 +351,64 @@ export class Naisc implements OnInit, AfterViewInit, OnChanges, OnDestroy {
         });
         break;
       case 'end':
+        if (!this.linkingRef) {
+          break;
+        }
+
+        if (!this.linkingRef.pin.multiple) {
+          this.removeLink(this.linkingRef.pin);
+        }
+        if (!pin.multiple) {
+          this.removeLink(pin);
+        }
+
+        const link: NaiscItemLink = {
+          from: {
+            item: this.linkingRef.item,
+            pin: this.linkingRef.pin
+          },
+          to: {
+            item: item,
+            pin: pin
+          }
+        };
+
         this.linkSubscription.unsubscribe();
+
+        this.linkingRef = null;
         this.linkEvents.next({actionType: 'end'});
+
+        this.linkEvents.next({
+          actionType: 'add',
+          refFrom: link.from,
+          refTo: link.to
+        });
+        this.links = [...this.links, link];
+        break;
+      case 'remove':
+        this.removeLink(pin);
         break;
     }
+  }
+
+  private removeLink(pin: NaiscPinDescriptor): void {
+    const toRemove = this.links.filter(l => l.from.pin === pin || l.to.pin === pin);
+
+    if (toRemove.length === 0) {
+      return;
+    }
+
+    toRemove.forEach(r => {
+      this.linkEvents.next({
+        actionType: 'remove',
+        refFrom: r.from,
+        refTo: r.to
+      });
+
+      this.links.splice(this.links.indexOf(r), 1);
+    });
+
+    this.links.slice();
   }
 
   private render(useAnimation: boolean = true): void {

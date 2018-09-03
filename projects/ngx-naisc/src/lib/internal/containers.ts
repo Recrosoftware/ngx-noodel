@@ -1,4 +1,4 @@
-import {NaiscType} from './naisc-type';
+import {NaiscType} from './models';
 
 
-export const AUTO_INJECTED_CONTENTS: NaiscType[] = [];
+export const AUTO_INJECTED_CONTENTS: { [type: string]: NaiscType } = {};

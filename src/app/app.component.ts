@@ -12,6 +12,7 @@ import {TestContentComponent} from './test-content.component';
     <button (click)="remove()">REMOVE</button>
     <button (click)="addNew()">ADD_NEW</button>
     <button (click)="clear()">CLEAR</button>
+    <button (click)="animate()">ANIMATE</button>
 
     <button (click)="addInstance()">ADD_INSTANCE</button>
   `,
@@ -30,6 +31,8 @@ export class AppComponent {
     TestContentComponent
   ];
 
+  private animationTimer: any;
+
   private readonly sameItem: NaiscItemDescriptor = {
     type: 'node01',
     permanent: false,
@@ -37,7 +40,7 @@ export class AppComponent {
     pins: {
       in: [
         {
-          'type': 'test',
+          'type': 'a',
           'multiple': true
         }
       ],
@@ -76,5 +79,26 @@ export class AppComponent {
 
   public clear(): void {
     this.naisc.clear();
+  }
+
+  public animate(): void {
+    if (this.animationTimer) {
+      clearInterval(this.animationTimer);
+      this.animationTimer = null;
+      return;
+    }
+
+    const startTime = Date.now();
+    this.animationTimer = setInterval(() => {
+      const diff = (Date.now() - startTime) / 1000;
+
+      const x = Math.sin(diff);
+      const y = Math.sin(diff + Math.PI / 2);
+
+      this.sameItem.position.x = x * 200;
+      this.sameItem.position.y = y * 200;
+
+      this.naisc.requestRender();
+    }, 100);
   }
 }

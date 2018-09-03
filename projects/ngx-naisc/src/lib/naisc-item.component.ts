@@ -4,6 +4,7 @@ import {
   ComponentFactoryResolver,
   ComponentRef,
   ElementRef,
+  HostListener,
   Input,
   OnDestroy,
   QueryList,
@@ -18,10 +19,8 @@ import {fromEvent, Observable, Subscription} from 'rxjs';
 import {filter, share, startWith, switchMap, takeUntil, tap} from 'rxjs/operators';
 
 import {RsAsyncInput} from './common';
-import {NaiscLinkEvent} from './internal/naisc-link-event';
-import {NaiscType} from './internal/naisc-type';
+import {NaiscLinkEvent, NaiscType, ViewProjection} from './internal/models';
 import {NAISC_METADATA_ACCESSOR, NAISC_PIN_POSITION} from './internal/symbols';
-import {ViewProjection} from './internal/view-projection';
 
 import {NaiscDefaultItemComponent} from './naisc-default-item.component';
 import {NaiscItemPinDirective} from './naisc-item-pin.directive';
@@ -34,15 +33,15 @@ import {NaiscItemDescriptor, NaiscPinDescriptor} from './shared/naisc-item-descr
   template: `
     <div class="naisc-item-track-bar" #titleBar>
       {{getTitle() | rsAsync}}
-      <i *ngIf="!item.permanent" (click)="onRemoveClick($event)"
-         class="naisc-item-close-btn {{removeItemIconClass}}"></i>
+      <i *ngIf="!item.permanent" class="naisc-item-close-btn {{removeItemIconClass}}"
+         (click)="onRemoveClick($event)" (mousedown)="$event.stopPropagation()"></i>
     </div>
 
     <div class="naisc-item-pins">
       <ul class="naisc-item-pins-in">
         <li *ngFor="let pin of item.pins.in; let idx = index">
           <span>{{getInputPinName(idx) | rsAsync}}</span>
-          <div [naiscItemPin]="pin" [item]="item" type="in"
+          <div [naiscItemPin]="pin" [item]="item" [type]="'in'"
                [linkEvents]="linkEvents"
                (linkEnd)="onLinkInternal('end', pin)"
                (linkStart)="onLinkInternal('start', pin)"
@@ -52,7 +51,7 @@ import {NaiscItemDescriptor, NaiscPinDescriptor} from './shared/naisc-item-descr
       <ul class="naisc-item-pins-out">
         <li *ngFor="let pin of item.pins.out; let idx = index">
           <span>{{getOutputPinName(idx) | rsAsync}}</span>
-          <div [naiscItemPin]="pin" [item]="item" type="out"
+          <div [naiscItemPin]="pin" [item]="item" [type]="'out'"
                [linkEvents]="linkEvents"
                (linkEnd)="onLinkInternal('end', pin)"
                (linkStart)="onLinkInternal('start', pin)"
@@ -66,8 +65,7 @@ import {NaiscItemDescriptor, NaiscPinDescriptor} from './shared/naisc-item-descr
     </div>
   `,
   host: {
-    'class': 'naisc-item',
-    '(mousedown)': 'onMouseDown($event)'
+    'class': 'naisc-item'
   },
   entryComponents: [
     NaiscDefaultItemComponent
@@ -122,6 +120,7 @@ export class NaiscItemComponent implements AfterViewInit, OnDestroy {
     this.dragSubscription.unsubscribe();
   }
 
+  @HostListener('mousedown', ['$event'])
   public onMouseDown(evt: Event): void {
     evt.preventDefault();
     evt.stopPropagation();
@@ -154,7 +153,7 @@ export class NaiscItemComponent implements AfterViewInit, OnDestroy {
     const templateType: Type<NaiscItemContent> = (
       this.templates ?
         this.templates
-          .find(t => t[NAISC_METADATA_ACCESSOR].type === this.item.type) as any :
+          .find(te => te[NAISC_METADATA_ACCESSOR].type.some(ty => ty === this.item.type)) as any :
         null
     ) || NaiscDefaultItemComponent;
 
@@ -185,8 +184,6 @@ export class NaiscItemComponent implements AfterViewInit, OnDestroy {
 
     useAnimations = useAnimations && typeof window.requestAnimationFrame === 'function';
 
-    this.recalculatePinsPosition();
-
     const c = this.el.nativeElement as HTMLDivElement;
 
     const setStyle = (x: number, y: number) => {
@@ -194,6 +191,8 @@ export class NaiscItemComponent implements AfterViewInit, OnDestroy {
 
       this.projectionCurrent.x = x;
       this.projectionCurrent.y = y;
+
+      this.recalculatePinsPosition();
     };
 
     const pt = this.item.position;
@@ -297,8 +296,8 @@ export class NaiscItemComponent implements AfterViewInit, OnDestroy {
       const diffY = (pinPosition.y - localPosition.y) / this.parentProjection.z;
 
       pin[NAISC_PIN_POSITION] = {
-        x: this.item.position.x + diffX,
-        y: this.item.position.y + diffY
+        x: this.projectionCurrent.x + diffX,
+        y: this.projectionCurrent.y + diffY
       };
     });
   }

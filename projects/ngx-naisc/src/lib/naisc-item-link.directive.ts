@@ -1,7 +1,8 @@
 import {ChangeDetectorRef, Directive, DoCheck, HostBinding, Input, OnChanges, SimpleChanges} from '@angular/core';
+import {ViewProjection} from './internal/models';
+
 import {NAISC_PIN_POSITION} from './internal/symbols';
 
-import {ViewProjection} from './internal/view-projection';
 import {NaiscPinDescriptor} from './shared/naisc-item-descriptor';
 
 
@@ -69,7 +70,7 @@ export class NaiscItemLinkDirective implements OnChanges, DoCheck {
     const target = this.targetPosition || this.localTargetPosition;
 
     if (source && target) {
-      let diff = (source.x - target.x) * .3; // FIXME
+      let diff = (target.x - source.x) * .4;
 
       if (diff < 0) {
         diff /= -.3;

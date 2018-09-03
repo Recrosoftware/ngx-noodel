@@ -1,8 +1,7 @@
 import {TypeDecorator} from '@angular/core';
 
 import {AUTO_INJECTED_CONTENTS} from '../internal/containers';
-import {NaiscMetadata} from '../internal/naisc-metadata';
-import {NaiscType} from '../internal/naisc-type';
+import {NaiscMetadata, NaiscType} from '../internal/models';
 import {NAISC_METADATA_ACCESSOR} from '../internal/symbols';
 
 import {NaiscItemContent} from './naisc-item-content';
@@ -18,31 +17,51 @@ const DEFAULT_OPTIONS: NaiscItemOptions = {
   outputPins: []
 };
 
-export function NaiscItem(type: string, opts?: Partial<NaiscItemOptions>): TypeDecorator {
+function isArray(obj: string | string[]): obj is string[] {
+  return obj instanceof Array;
+}
+
+export function NaiscItem(type: string | string[], opts?: Partial<NaiscItemOptions>): TypeDecorator {
   const options = {...DEFAULT_OPTIONS, ...opts};
 
+  if (!isArray(type)) {
+    type = [type];
+  }
+
+  type = type.filter((t, i, a) => a.indexOf(t) === i).sort();
+
   return (target: NaiscType) => {
+    if (type.length < 1) {
+      throw new Error(`You must specify at least one type '${target.name}'`);
+    }
+
     if (!(target.prototype instanceof NaiscItemContent)) {
-      throw new Error(`Decorated class ${target.name} must extend 'NaiscItemContent' class.`);
+      throw new Error(`Decorated class '${target.name}' must extend 'NaiscItemContent' class.`);
     }
 
     if (options.autoInject) {
-      if (AUTO_INJECTED_CONTENTS.indexOf(target) < 0) {
-        AUTO_INJECTED_CONTENTS.push(target);
-      }
+      (type as string[]).forEach(t => {
+        if (t in AUTO_INJECTED_CONTENTS) {
+          const existing = AUTO_INJECTED_CONTENTS[t];
+
+          throw new Error(`Cannot auto-inject '${target.name}' found already '${existing.name}' as provider for type '${t}'`);
+        }
+
+        AUTO_INJECTED_CONTENTS[t] = target;
+      });
     }
 
     const metadata = new NaiscMetadata();
 
-    metadata.type = type;
+    metadata.type = type as string[];
     metadata.factory = () => {
       const descriptor: NaiscItemDescriptor = {
-        type: type,
+        type: type[0],
         permanent: options.permanent,
         position: Object.seal({x: 0, y: 0}),
         pins: Object.freeze({
-          in: options.inputPins.slice(),
-          out: options.outputPins.slice()
+          in: options.inputPins.map(p => ({...p})),
+          out: options.outputPins.map(p => ({...p}))
         }),
         state: {}
       };

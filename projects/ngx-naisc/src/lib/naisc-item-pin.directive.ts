@@ -1,9 +1,8 @@
-import {Directive, ElementRef, EventEmitter, Input, OnDestroy, OnInit, Output} from '@angular/core';
+import {Directive, ElementRef, EventEmitter, HostListener, Input, OnDestroy, OnInit, Output} from '@angular/core';
 import {Observable, Subscription} from 'rxjs';
 
-import {NaiscLinkEvent} from './internal/naisc-link-event';
+import {NaiscLinkEvent, ViewProjection} from './internal/models';
 import {NAISC_PIN_POSITION} from './internal/symbols';
-import {ViewProjection} from './internal/view-projection';
 
 import {NaiscItemDescriptor, NaiscPinDescriptor} from './shared/naisc-item-descriptor';
 
@@ -15,10 +14,7 @@ import {NaiscItemDescriptor, NaiscPinDescriptor} from './shared/naisc-item-descr
     '[class.multi]': 'pin.multiple',
     '[class.active]': 'active',
     '[class.invalid]': 'invalid',
-    '[class.highlight]': 'highlight',
-    '(click)': 'onClick($event)',
-    '(mouseup)': 'onMouseUp($event)',
-    '(mousedown)': 'onMouseDown($event)'
+    '[class.highlight]': 'highlight'
   }
 })
 export class NaiscItemPinDirective implements OnInit, OnDestroy {
@@ -52,10 +48,9 @@ export class NaiscItemPinDirective implements OnInit, OnDestroy {
 
   public ngOnInit(): void {
     this.eventSubscription = this.linkEvents.subscribe(evt => {
-      this.resetState();
-
       switch (evt.actionType) {
         case 'start':
+          this.resetState();
           if (evt.ref.pin === this.pin) {
             this.highlight = true;
           } else if (evt.ref.item === this.item || this.type === 'out') {
@@ -63,6 +58,9 @@ export class NaiscItemPinDirective implements OnInit, OnDestroy {
           } else if (evt.ref.pin.type !== this.pin.type) {
             this.invalid = true;
           }
+          break;
+        case 'end':
+          this.resetState();
           break;
       }
     });
@@ -72,6 +70,7 @@ export class NaiscItemPinDirective implements OnInit, OnDestroy {
     this.eventSubscription.unsubscribe();
   }
 
+  @HostListener('mousedown', ['$event'])
   public onMouseDown(evt: MouseEvent): void {
     evt.preventDefault();
     evt.stopPropagation();
@@ -83,6 +82,7 @@ export class NaiscItemPinDirective implements OnInit, OnDestroy {
     this.linkStart.emit(evt);
   }
 
+  @HostListener('mouseup', ['$event'])
   public onMouseUp(evt: MouseEvent): void {
     if (!this.active || this.invalid || this.type === 'out') {
       return;
@@ -91,6 +91,7 @@ export class NaiscItemPinDirective implements OnInit, OnDestroy {
     this.linkEnd.emit(evt);
   }
 
+  @HostListener('click', ['$event'])
   public onClick(evt: MouseEvent): void {
     if (!this.active) {
       return;

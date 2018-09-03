@@ -20,6 +20,10 @@
   }
 }
 
-.naisc-connection {
+.naisc-link {
   stroke: #d2412d;
+
+  &.naisc-temporary-link {
+    stroke: #54be46;
+  }
 }

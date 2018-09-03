@@ -32,12 +32,12 @@
     transform: translate(0, 0) scale(1);
     transform-origin: 0 0 0;
 
-    & > svg.naisc-connections {
+    & > svg.naisc-links {
       @include absoluteBox();
 
       z-index: -1;
 
-      path.naisc-connection {
+      path.naisc-link {
         fill: none;
         stroke-width: 3px;
         stroke-linecap: round;

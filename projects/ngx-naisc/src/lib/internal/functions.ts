@@ -1,7 +1,6 @@
 import {ɵstringify as stringify} from '@angular/core';
 import {NaiscItemContent} from '../shared/naisc-item-content';
-import {NaiscMetadata} from './naisc-metadata';
-import {NaiscType} from './naisc-type';
+import {NaiscMetadata, NaiscType} from './models';
 import {NAISC_METADATA_ACCESSOR} from './symbols';
 
 
