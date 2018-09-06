@@ -227,6 +227,27 @@ export class NaiscItemComponent implements AfterViewInit, OnDestroy {
     }
   }
 
+  public getItemExtent(): { top: number, right: number, bottom: number, left: number } {
+    const c = this.el.nativeElement as HTMLDivElement;
+
+    let width = 100;
+    let height = 100;
+
+    if (typeof c.getBoundingClientRect === 'function') {
+      const rect = c.getBoundingClientRect();
+
+      width = rect.width;
+      height = rect.height;
+    }
+
+    return {
+      top: this.item.position.y,
+      left: this.item.position.x,
+      bottom: this.item.position.y + height,
+      right: this.item.position.x + width
+    };
+  }
+
   private listenDragEvents(): void {
     const cDown = fromEvent<MouseEvent>(this.titleBarRef.nativeElement, 'mousedown');
     const cDrag = cDown.pipe(

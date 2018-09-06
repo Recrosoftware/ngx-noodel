@@ -13,6 +13,7 @@ import {TestContentComponent} from './test-content.component';
     <button (click)="addNew()">ADD_NEW</button>
     <button (click)="clear()">CLEAR</button>
     <button (click)="animate()">ANIMATE</button>
+    <button (click)="fit()">FIT</button>
 
     <button (click)="addInstance()">ADD_INSTANCE</button>
   `,
@@ -51,6 +52,10 @@ export class AppComponent {
       'pins-in': ['LinkName']
     }
   };
+
+  public fit() {
+    this.naisc.fitView();
+  }
 
   public addInstance(): void {
     this.naisc.instantiateFrom(TestContentComponent);

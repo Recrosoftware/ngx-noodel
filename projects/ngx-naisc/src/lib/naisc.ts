@@ -161,6 +161,7 @@ export class Naisc implements OnInit, AfterViewInit, OnChanges, OnDestroy {
     this.onMove = cMove;
   }
 
+  // region Lifecycle
   public ngOnInit(): void {
     let prevMouseX: number;
     let prevMouseY: number;
@@ -238,7 +239,9 @@ export class Naisc implements OnInit, AfterViewInit, OnChanges, OnDestroy {
     this.zoomSubscription.unsubscribe();
     this.linkSubscription.unsubscribe();
   }
+  // endregion
 
+  // region Logic
   public instantiateFrom(template: Type<NaiscItemContent>, position?: { x: 0, y: 0 }): NaiscItemDescriptor {
     validateNaiscContent(template);
 
@@ -308,15 +311,6 @@ export class Naisc implements OnInit, AfterViewInit, OnChanges, OnDestroy {
     this.containerRef.clear();
     this.items.length = 0;
     this.links = [];
-  }
-
-  public requestRender(useAnimations: boolean = true): void {
-    setTimeout(() => {
-      this.render(useAnimations);
-      this.items.forEach(i => i.ref.instance.render(useAnimations, true));
-
-      this.changeDetector.markForCheck();
-    });
   }
 
   private onLink(action: 'start' | 'end' | 'remove', item: NaiscItemDescriptor, pin: NaiscPinDescriptor): void {
@@ -410,6 +404,96 @@ export class Naisc implements OnInit, AfterViewInit, OnChanges, OnDestroy {
 
     this.links.slice();
   }
+  // endregion
+
+  // region Rendering
+  public requestRender(useAnimations: boolean = true): void {
+    setTimeout(() => {
+      this.render(useAnimations);
+      this.items.forEach(i => i.ref.instance.render(useAnimations, true));
+
+      this.changeDetector.markForCheck();
+    });
+  }
+
+  public setCenter(center: { x: number, y: number }, options: { triggerRender?: boolean, renderWithAnimations?: boolean }): void {
+    this.projectionTarget.x = center.x;
+    this.projectionTarget.y = center.y;
+
+    if (!options || options.triggerRender) {
+      this.requestRender(!!(!options || options.renderWithAnimations));
+    }
+  }
+
+  // FIXME
+  public fitView(extent?: { top: number, right: number, bottom: number, left: number }, useAnimations?: boolean): void {
+    let eWidth: number;
+    let eHeight: number;
+    let eCenterX: number;
+    let eCenterY: number;
+
+    let noExtent = false;
+
+    if (!extent) {
+      let top = Number.POSITIVE_INFINITY;
+      let bottom = Number.NEGATIVE_INFINITY;
+      let left = Number.POSITIVE_INFINITY;
+      let right = Number.NEGATIVE_INFINITY;
+
+      if (this.items.length > 0) {
+        this.items.forEach(item => {
+          const e = item.ref.instance.getItemExtent();
+
+          if (top > e.top) {
+            top = e.top;
+          }
+          if (right < e.right) {
+            right = e.right;
+          }
+          if (bottom < e.bottom) {
+            bottom = e.bottom;
+          }
+          if (left > e.left) {
+            left = e.left;
+          }
+        });
+
+        eWidth = Math.abs(right - left);
+        eHeight = Math.abs(bottom - top);
+
+        eCenterX = (right + left) / 2;
+        eCenterY = (bottom + top) / 2;
+      } else {
+        noExtent = true;
+      }
+    } else {
+      eWidth = Math.abs(extent.right - extent.left);
+      eHeight = Math.abs(extent.bottom - extent.top);
+
+      eCenterX = (extent.right + extent.left) / 2;
+      eCenterY = (extent.bottom + extent.top) / 2;
+    }
+
+    if (noExtent) {
+      this.projectionTarget.x = 0;
+      this.projectionTarget.y = 0;
+      this.projectionTarget.z = 1;
+    } else {
+      const {width, height} = this.getContainerSize();
+
+      const wRatio = width / eWidth;
+      const hRatio = height / eHeight;
+
+      const ratio = Math.min(wRatio, hRatio) * .95;
+      const zoom = Math.min(this.maxZoom, Math.max(this.minZoom, ratio));
+
+      this.projectionTarget.x = eCenterX;
+      this.projectionTarget.y = eCenterY;
+      this.projectionTarget.z = zoom;
+    }
+
+    this.requestRender(useAnimations);
+  }
 
   private render(useAnimation: boolean = true): void {
     if (!this.viewElementRef) {
@@ -468,6 +552,21 @@ export class Naisc implements OnInit, AfterViewInit, OnChanges, OnDestroy {
     }
   }
 
+  private getContainerSize(): { width: number, height: number } {
+    const c = this.el.nativeElement as HTMLDivElement;
+
+    if (typeof c.getBoundingClientRect !== 'function') {
+      return {width: 600, height: 400};
+    }
+
+    const {width, height} = c.getBoundingClientRect();
+
+    return {
+      width,
+      height
+    };
+  }
+
   private getMousePositionInContainer({pageX, pageY}: MouseEvent) {
     const c = this.el.nativeElement as HTMLDivElement;
 
@@ -494,4 +593,5 @@ export class Naisc implements OnInit, AfterViewInit, OnChanges, OnDestroy {
       y: (y - this.projectionTarget.y) / this.projectionTarget.z
     };
   }
+  // endregion
 }
