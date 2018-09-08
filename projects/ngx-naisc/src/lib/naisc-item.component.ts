@@ -6,6 +6,7 @@ import {
   ElementRef,
   HostListener,
   Input,
+  NgZone,
   OnDestroy,
   QueryList,
   Type,
@@ -104,6 +105,7 @@ export class NaiscItemComponent implements AfterViewInit, OnDestroy {
   private dragSubscription = Subscription.EMPTY;
 
   constructor(private el: ElementRef,
+              private zone: NgZone,
               private resolver: ComponentFactoryResolver) {
     this.dragging = false;
     this.projectionCurrent = {x: 0, y: 0};
@@ -177,53 +179,61 @@ export class NaiscItemComponent implements AfterViewInit, OnDestroy {
     this.onLink(a, p);
   }
 
-  public render(useAnimations: boolean = false, forced: boolean = false): void {
+  public render(useAnimations: boolean = false, forced: boolean = false, thisZone: boolean = false): void {
     if (!forced && this.item.position.x === this.projectionCurrent.x && this.item.position.y === this.projectionCurrent.y) {
       return;
     }
 
-    useAnimations = useAnimations && typeof window.requestAnimationFrame === 'function';
+    const _render = () => {
+      useAnimations = useAnimations && typeof window.requestAnimationFrame === 'function';
 
-    const c = this.el.nativeElement as HTMLDivElement;
+      const c = this.el.nativeElement as HTMLDivElement;
 
-    const setStyle = (x: number, y: number) => {
-      c.style.transform = `translate(${x}px, ${y}px)`;
+      const setStyle = (x: number, y: number) => {
+        c.style.transform = `translate(${x}px, ${y}px)`;
 
-      this.projectionCurrent.x = x;
-      this.projectionCurrent.y = y;
+        this.projectionCurrent.x = x;
+        this.projectionCurrent.y = y;
 
-      this.recalculatePinsPosition();
-    };
-
-    const pt = this.item.position;
-
-    if (!useAnimations) {
-      setStyle(pt.x, pt.y);
-    } else {
-      const pc = this.projectionCurrent;
-      const af = this.animationFunction;
-
-      let startTs: number = null;
-      const animate = (timestamp) => {
-        if (startTs == null) {
-          startTs = timestamp;
-        }
-
-        const span = timestamp - startTs;
-
-        if (span >= this.animationDuration) {
-          setStyle(pt.x, pt.y);
-          return;
-        }
-
-        const t = span / this.animationDuration;
-
-        setStyle(af(pc.x, pt.x, t), af(pc.y, pt.y, t));
-        this.animationRequestRef = requestAnimationFrame(animate);
+        this.recalculatePinsPosition();
       };
 
-      cancelAnimationFrame(this.animationRequestRef);
-      this.animationRequestRef = requestAnimationFrame(animate);
+      const pt = this.item.position;
+
+      if (!useAnimations) {
+        setStyle(pt.x, pt.y);
+      } else {
+        const pc = this.projectionCurrent;
+        const af = this.animationFunction;
+
+        let startTs: number = null;
+        const animate = (timestamp) => {
+          if (startTs == null) {
+            startTs = timestamp;
+          }
+
+          const span = timestamp - startTs;
+
+          if (span >= this.animationDuration) {
+            setStyle(pt.x, pt.y);
+            return;
+          }
+
+          const t = span / this.animationDuration;
+
+          setStyle(af(pc.x, pt.x, t), af(pc.y, pt.y, t));
+          this.animationRequestRef = requestAnimationFrame(animate);
+        };
+
+        cancelAnimationFrame(this.animationRequestRef);
+        this.animationRequestRef = requestAnimationFrame(animate);
+      }
+    };
+
+    if (thisZone) {
+      _render();
+    } else {
+      this.zone.runOutsideAngular(_render);
     }
   }
 
@@ -236,8 +246,8 @@ export class NaiscItemComponent implements AfterViewInit, OnDestroy {
     if (typeof c.getBoundingClientRect === 'function') {
       const rect = c.getBoundingClientRect();
 
-      width = rect.width;
-      height = rect.height;
+      width = rect.width / this.parentProjection.z;
+      height = rect.height / this.parentProjection.z;
     }
 
     return {

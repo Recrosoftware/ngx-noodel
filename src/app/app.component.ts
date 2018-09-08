@@ -14,6 +14,8 @@ import {TestContentComponent} from './test-content.component';
     <button (click)="clear()">CLEAR</button>
     <button (click)="animate()">ANIMATE</button>
     <button (click)="fit()">FIT</button>
+    <button (click)="setCenter()">GOTO 100 100</button>
+    <button (click)="setZoom()">ZOOM 3</button>
 
     <button (click)="addInstance()">ADD_INSTANCE</button>
   `,
@@ -67,6 +69,14 @@ export class AppComponent {
 
   public remove(): void {
     this.naisc.remove(this.sameItem);
+  }
+
+  public setCenter(): void {
+    this.naisc.setCenter({x: 100, y: 100});
+  }
+
+  public setZoom(): void {
+    this.naisc.setZoom(3);
   }
 
   public addNew(): void {

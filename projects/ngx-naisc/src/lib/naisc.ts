@@ -6,6 +6,7 @@ import {
   ComponentFactoryResolver,
   ElementRef,
   Input,
+  NgZone,
   OnChanges,
   OnDestroy,
   OnInit,
@@ -18,7 +19,7 @@ import {
 
 import {fromEvent, merge, Observable, Subject, Subscription} from 'rxjs';
 import {filter, share, startWith, switchMap, take, takeUntil, tap} from 'rxjs/operators';
-import {validateNaiscContent} from './internal/functions';
+import {cancelAsyncMicrotask, runAsyncMicrotask, validateNaiscContent} from './internal/functions';
 
 import {
   NaiscItemInstanceRef,
@@ -92,6 +93,8 @@ export class Naisc implements OnInit, AfterViewInit, OnChanges, OnDestroy {
   public links: NaiscItemLink[] = [];
 
   private dragging: boolean;
+
+  private deferredRenderRef: number;
   private animationRequestRef: number;
 
   private dragSubscription = Subscription.EMPTY;
@@ -112,6 +115,7 @@ export class Naisc implements OnInit, AfterViewInit, OnChanges, OnDestroy {
   private readonly itemFactory: ComponentFactory<NaiscItemComponent>;
 
   constructor(private el: ElementRef,
+              private zone: NgZone,
               private changeDetector: ChangeDetectorRef,
               private resolver: ComponentFactoryResolver) {
     this.items = [];
@@ -196,12 +200,10 @@ export class Naisc implements OnInit, AfterViewInit, OnChanges, OnDestroy {
       const deltaZoom = -evt.deltaY * .01;
       const {x, y} = this.getMousePositionInContainer(evt);
 
-      const newZoom = Math.max(this.minZoom, Math.min(this.maxZoom, this.projectionTarget.z + deltaZoom));
-      const zoomAspect = newZoom / this.projectionTarget.z;
-
-      this.projectionTarget.x = x - (x - this.projectionTarget.x) * zoomAspect;
-      this.projectionTarget.y = y - (y - this.projectionTarget.y) * zoomAspect;
-      this.projectionTarget.z = newZoom;
+      this.setZoom(this.projectionTarget.z + deltaZoom, {
+        posX: x, posY: y,
+        triggerRender: false
+      });
 
       this.render();
     });
@@ -408,24 +410,72 @@ export class Naisc implements OnInit, AfterViewInit, OnChanges, OnDestroy {
 
   // region Rendering
   public requestRender(useAnimations: boolean = true): void {
-    setTimeout(() => {
-      this.render(useAnimations);
-      this.items.forEach(i => i.ref.instance.render(useAnimations, true));
+    this.zone.runOutsideAngular(() => {
+      runAsyncMicrotask(() => {
+        this.render(useAnimations, true);
+        this.items.forEach(i => i.ref.instance.render(useAnimations, true, true));
 
-      this.changeDetector.markForCheck();
+        this.changeDetector.markForCheck();
+      });
     });
   }
 
-  public setCenter(center: { x: number, y: number }, options: { triggerRender?: boolean, renderWithAnimations?: boolean }): void {
-    this.projectionTarget.x = center.x;
-    this.projectionTarget.y = center.y;
+  public setZoom(zoom: number,
+                 options?: {
+                   posX?: number,
+                   posY?: number,
+                   triggerRender?: boolean,
+                   renderWithAnimations?: boolean,
+                   deferred?: boolean
+                 }): void {
+    zoom = Math.max(this.minZoom, Math.min(this.maxZoom, zoom));
 
-    if (!options || options.triggerRender) {
-      this.requestRender(!!(!options || options.renderWithAnimations));
+    const zoomAspect = zoom / this.projectionTarget.z;
+
+    const x = options && options.posX || 0;
+    const y = options && options.posY || 0;
+
+    this.projectionTarget.x = x - (x - this.projectionTarget.x) * zoomAspect;
+    this.projectionTarget.y = y - (y - this.projectionTarget.y) * zoomAspect;
+    this.projectionTarget.z = zoom;
+
+    const render = !options || options.triggerRender == null || !!options.triggerRender;
+    const renderAnimations = !options || options.renderWithAnimations == null || !!options.renderWithAnimations;
+    const deferredRendering = !options || options.deferred == null || !!options.deferred;
+
+    if (render) {
+      if (deferredRendering) {
+        cancelAsyncMicrotask(this.deferredRenderRef);
+        this.deferredRenderRef = runAsyncMicrotask(() => {
+          this.render(renderAnimations);
+        });
+      } else {
+        this.render(renderAnimations);
+      }
     }
   }
 
-  // FIXME
+  public setCenter(center: { x: number, y: number },
+                   options?: { triggerRender?: boolean, renderWithAnimations?: boolean, deferred?: boolean }): void {
+    this.projectionTarget.x = -center.x * this.projectionTarget.z;
+    this.projectionTarget.y = -center.y * this.projectionTarget.z;
+
+    const render = !options || options.triggerRender == null || !!options.triggerRender;
+    const renderAnimations = !options || options.renderWithAnimations == null || !!options.renderWithAnimations;
+    const deferredRendering = !options || options.deferred == null || !!options.deferred;
+
+    if (render) {
+      if (deferredRendering) {
+        cancelAsyncMicrotask(this.deferredRenderRef);
+        this.deferredRenderRef = runAsyncMicrotask(() => {
+          this.render(renderAnimations);
+        });
+      } else {
+        this.render(renderAnimations);
+      }
+    }
+  }
+
   public fitView(extent?: { top: number, right: number, bottom: number, left: number }, useAnimations?: boolean): void {
     let eWidth: number;
     let eHeight: number;
@@ -436,9 +486,9 @@ export class Naisc implements OnInit, AfterViewInit, OnChanges, OnDestroy {
 
     if (!extent) {
       let top = Number.POSITIVE_INFINITY;
+      let right = Number.NEGATIVE_INFINITY;
       let bottom = Number.NEGATIVE_INFINITY;
       let left = Number.POSITIVE_INFINITY;
-      let right = Number.NEGATIVE_INFINITY;
 
       if (this.items.length > 0) {
         this.items.forEach(item => {
@@ -487,68 +537,76 @@ export class Naisc implements OnInit, AfterViewInit, OnChanges, OnDestroy {
       const ratio = Math.min(wRatio, hRatio) * .95;
       const zoom = Math.min(this.maxZoom, Math.max(this.minZoom, ratio));
 
-      this.projectionTarget.x = eCenterX;
-      this.projectionTarget.y = eCenterY;
+      this.projectionTarget.x = -eCenterX * zoom;
+      this.projectionTarget.y = -eCenterY * zoom;
       this.projectionTarget.z = zoom;
     }
 
     this.requestRender(useAnimations);
   }
 
-  private render(useAnimation: boolean = true): void {
+  private render(useAnimation: boolean = true, thisZone: boolean = false): void {
     if (!this.viewElementRef) {
       return;
     }
 
-    useAnimation = useAnimation && !this.dragging && typeof window.requestAnimationFrame === 'function';
+    const _render = () => {
+      useAnimation = useAnimation && !this.dragging && typeof window.requestAnimationFrame === 'function';
 
-    const c = this.el.nativeElement as HTMLDivElement;
-    const v = this.viewElementRef.nativeElement as HTMLDivElement;
+      const c = this.el.nativeElement as HTMLDivElement;
+      const v = this.viewElementRef.nativeElement as HTMLDivElement;
 
-    const setStyle = (x: number, y: number, zoom: number) => {
-      const bgW = BACKGROUND_SIZE * zoom;
-      const bgHW = bgW / 2;
+      const setStyle = (x: number, y: number, zoom: number) => {
+        const bgW = BACKGROUND_SIZE * zoom;
+        const bgHW = bgW / 2;
 
-      c.style.backgroundSize = `${bgW}px`;
-      c.style.backgroundPositionX = `calc(50% + ${(x + bgHW) % bgW}px)`;
-      c.style.backgroundPositionY = `calc(50% + ${(y + bgHW) % bgW}px)`;
+        c.style.backgroundSize = `${bgW}px`;
+        c.style.backgroundPositionX = `calc(50% + ${(x + bgHW) % bgW}px)`;
+        c.style.backgroundPositionY = `calc(50% + ${(y + bgHW) % bgW}px)`;
 
-      v.style.transform = `translate(${x}px, ${y}px) scale(${zoom})`;
+        v.style.transform = `translate(${x}px, ${y}px) scale(${zoom})`;
 
-      this.projectionCurrent.x = x;
-      this.projectionCurrent.y = y;
-      this.projectionCurrent.z = zoom;
-    };
-
-    const pt = this.projectionTarget;
-
-    if (!useAnimation) {
-      setStyle(pt.x, pt.y, pt.z);
-    } else {
-      const pc = this.projectionCurrent;
-      const af = this.animationFunction;
-
-      let startTs: number = null;
-      const animate = (timestamp) => {
-        if (startTs == null) {
-          startTs = timestamp;
-        }
-
-        const span = timestamp - startTs;
-
-        if (span >= this.animationDuration) {
-          setStyle(pt.x, pt.y, pt.z);
-          return;
-        }
-
-        const t = span / this.animationDuration;
-
-        setStyle(af(pc.x, pt.x, t), af(pc.y, pt.y, t), af(pc.z, pt.z, t));
-        this.animationRequestRef = requestAnimationFrame(animate);
+        this.projectionCurrent.x = x;
+        this.projectionCurrent.y = y;
+        this.projectionCurrent.z = zoom;
       };
 
-      cancelAnimationFrame(this.animationRequestRef);
-      this.animationRequestRef = requestAnimationFrame(animate);
+      const pt = this.projectionTarget;
+
+      if (!useAnimation) {
+        setStyle(pt.x, pt.y, pt.z);
+      } else {
+        const pc = this.projectionCurrent;
+        const af = this.animationFunction;
+
+        let startTs: number = null;
+        const animate = (timestamp) => {
+          if (startTs == null) {
+            startTs = timestamp;
+          }
+
+          const span = timestamp - startTs;
+
+          if (span >= this.animationDuration) {
+            setStyle(pt.x, pt.y, pt.z);
+            return;
+          }
+
+          const t = span / this.animationDuration;
+
+          setStyle(af(pc.x, pt.x, t), af(pc.y, pt.y, t), af(pc.z, pt.z, t));
+          this.animationRequestRef = requestAnimationFrame(animate);
+        };
+
+        cancelAnimationFrame(this.animationRequestRef);
+        this.animationRequestRef = requestAnimationFrame(animate);
+      }
+    };
+
+    if (thisZone) {
+      _render();
+    } else {
+      this.zone.runOutsideAngular(_render);
     }
   }
 
