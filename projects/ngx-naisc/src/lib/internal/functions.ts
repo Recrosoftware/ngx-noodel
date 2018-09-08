@@ -45,3 +45,36 @@ export function runAsyncMicrotask(fn: (...args: any[]) => any, applyThis?: any, 
 
   return id;
 }
+
+export function deepCopy<T>(value: T, maxDepth: number = 2048, level: number = 0): T {
+  if (level > maxDepth) {
+    return void 0;
+  }
+
+  switch (typeof value) {
+    case 'boolean':
+    case 'string':
+    case 'number':
+    case 'symbol':
+      return value;
+    case 'object':
+      if (!value) {
+        return value;
+      }
+
+      if (Array.isArray(value)) {
+        return value.map(val => deepCopy(val, maxDepth, level + 1)) as any;
+      } else {
+        const toReturn: any = {};
+        for (const key in value) {
+          if (value.hasOwnProperty(key)) {
+            toReturn[key] = deepCopy(value[key], maxDepth, level + 1);
+          }
+        }
+
+        return toReturn;
+      }
+    default:
+      return void 0;
+  }
+}

@@ -11,4 +11,8 @@ export abstract class NaiscItemContent {
 
   public abstract getInputPinName(idx: number): string | Promise<string> | Observable<string>;
   public abstract getOutputPinName(idx: number): string | Promise<string> | Observable<string>;
+
+  public isPermanent(): boolean | Promise<boolean> | Observable<boolean> {
+    return false;
+  }
 }

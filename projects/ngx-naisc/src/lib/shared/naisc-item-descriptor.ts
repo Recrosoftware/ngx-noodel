@@ -1,6 +1,5 @@
 export interface NaiscItemDescriptor {
   readonly type: string;
-  readonly permanent: boolean;
   readonly position: {
     x: number;
     y: number;

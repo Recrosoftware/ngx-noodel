@@ -16,6 +16,8 @@ import {TestContentComponent} from './test-content.component';
     <button (click)="fit()">FIT</button>
     <button (click)="setCenter()">GOTO 100 100</button>
     <button (click)="setZoom()">ZOOM 3</button>
+    <button (click)="dumpExport()">EXPORT</button>
+    <button (click)="dumpImport()">IMPORT</button>
 
     <button (click)="addInstance()">ADD_INSTANCE</button>
   `,
@@ -38,7 +40,6 @@ export class AppComponent {
 
   private readonly sameItem: NaiscItemDescriptor = {
     type: 'node01',
-    permanent: false,
     position: {x: 0, y: 0},
     pins: {
       in: [
@@ -50,10 +51,13 @@ export class AppComponent {
       out: []
     },
     state: {
+      'permanent': true,
       'title': 'Node Title',
       'pins-in': ['LinkName']
     }
   };
+
+  private dump: string;
 
   public fit() {
     this.naisc.fitView();
@@ -79,10 +83,19 @@ export class AppComponent {
     this.naisc.setZoom(3);
   }
 
+  public dumpExport(): void {
+    this.dump = JSON.stringify(this.naisc.export());
+
+    console.log(this.dump);
+  }
+
+  public dumpImport(): void {
+    this.naisc.import(JSON.parse(this.dump));
+  }
+
   public addNew(): void {
     this.naisc.add({
       type: 'node02',
-      permanent: false,
       position: {x: Math.random() * 1000 - 500, y: Math.random() * 1000 - 500},
       pins: {
         in: [],

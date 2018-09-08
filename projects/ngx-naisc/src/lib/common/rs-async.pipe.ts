@@ -38,7 +38,7 @@ export class RsAsyncPipe<T> implements PipeTransform, OnDestroy {
   constructor(private changeDetector: ChangeDetectorRef) {
   }
 
-  public transform(value: RsAsyncInput<T>): T | WrappedValue {
+  public transform(value: RsAsyncInput<T>, defaultValue?: T): T | WrappedValue {
     if (canSubscribe(value)) {
       if (this.localEmitter !== value) {
         this.localEmitter = value as Promise<T> | Observable<T>;
@@ -54,6 +54,10 @@ export class RsAsyncPipe<T> implements PipeTransform, OnDestroy {
               throw err;
             }
           );
+
+        if (defaultValue !== void 0) {
+          this.localNext = defaultValue;
+        }
 
         this.localResult = this.localNext;
         return this.localResult;

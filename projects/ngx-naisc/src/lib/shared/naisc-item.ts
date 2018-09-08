@@ -12,7 +12,6 @@ import {NaiscItemOptions} from './naisc-item-options';
 
 const DEFAULT_OPTIONS: NaiscItemOptions = {
   autoInject: false,
-  permanent: false,
   inputPins: [],
   outputPins: []
 };
@@ -57,7 +56,6 @@ export function NaiscItem(type: string | string[], opts?: Partial<NaiscItemOptio
     metadata.factory = () => {
       const descriptor: NaiscItemDescriptor = {
         type: type[0],
-        permanent: options.permanent,
         position: Object.seal({x: 0, y: 0}),
         pins: Object.freeze({
           in: options.inputPins.map(p => ({...p})),

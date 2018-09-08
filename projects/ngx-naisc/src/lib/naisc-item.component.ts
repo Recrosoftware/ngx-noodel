@@ -20,6 +20,7 @@ import {fromEvent, Observable, Subscription} from 'rxjs';
 import {filter, share, startWith, switchMap, takeUntil, tap} from 'rxjs/operators';
 
 import {RsAsyncInput} from './common';
+import {runAsyncTask} from './internal/functions';
 import {NaiscLinkEvent, NaiscType, ViewProjection} from './internal/models';
 import {NAISC_METADATA_ACCESSOR, NAISC_PIN_POSITION} from './internal/symbols';
 
@@ -34,7 +35,7 @@ import {NaiscItemDescriptor, NaiscPinDescriptor} from './shared/naisc-item-descr
   template: `
     <div class="naisc-item-track-bar" #titleBar>
       {{getTitle() | rsAsync}}
-      <i *ngIf="!item.permanent" class="naisc-item-close-btn {{removeItemIconClass}}"
+      <i *ngIf="!(isPermanent() | rsAsync:true)" class="naisc-item-close-btn {{removeItemIconClass}}"
          (click)="onRemoveClick($event)" (mousedown)="$event.stopPropagation()"></i>
     </div>
 
@@ -46,7 +47,8 @@ import {NaiscItemDescriptor, NaiscPinDescriptor} from './shared/naisc-item-descr
                [linkEvents]="linkEvents"
                (linkEnd)="onLinkInternal('end', pin)"
                (linkStart)="onLinkInternal('start', pin)"
-               (removeLinks)="onLinkInternal('remove', pin)"></div>
+               (removeLinks)="onLinkInternal('remove', pin)"
+               (calculatePosition)="calculatePinPosition(pin, $event)"></div>
         </li>
       </ul>
       <ul class="naisc-item-pins-out">
@@ -56,7 +58,8 @@ import {NaiscItemDescriptor, NaiscPinDescriptor} from './shared/naisc-item-descr
                [linkEvents]="linkEvents"
                (linkEnd)="onLinkInternal('end', pin)"
                (linkStart)="onLinkInternal('start', pin)"
-               (removeLinks)="onLinkInternal('remove', pin)"></div>
+               (removeLinks)="onLinkInternal('remove', pin)"
+               (calculatePosition)="calculatePinPosition(pin, $event)"></div>
         </li>
       </ul>
     </div>
@@ -115,7 +118,7 @@ export class NaiscItemComponent implements AfterViewInit, OnDestroy {
     this.render();
     this.listenDragEvents();
 
-    setTimeout(() => this.updateContentTemplate());
+    runAsyncTask(() => this.updateContentTemplate());
   }
 
   public ngOnDestroy(): void {
@@ -138,6 +141,10 @@ export class NaiscItemComponent implements AfterViewInit, OnDestroy {
 
   public getOutputPinName(index: number): RsAsyncInput<string> {
     return this.contentRef ? this.contentRef.instance.getOutputPinName(index) : '';
+  }
+
+  public isPermanent(): RsAsyncInput<boolean> {
+    return this.contentRef ? this.contentRef.instance.isPermanent() : false;
   }
 
   public onRemoveClick(evt: Event): void {
@@ -172,10 +179,12 @@ export class NaiscItemComponent implements AfterViewInit, OnDestroy {
     this.contentRefType = templateType;
 
     this.contentRef.instance.item = this.item;
+
+    runAsyncTask(() => this.render(false, true, true));
   }
 
   public onLinkInternal(a: 'start' | 'end' | 'remove', p: NaiscPinDescriptor): void {
-    this.render(false, true);
+    this.render(false, true, true);
     this.onLink(a, p);
   }
 
@@ -258,6 +267,18 @@ export class NaiscItemComponent implements AfterViewInit, OnDestroy {
     };
   }
 
+  public calculatePinPosition(pin: NaiscPinDescriptor,
+                              pinPosition: ViewProjection,
+                              itemPosition: ViewProjection = this.getItemPosition()): void {
+    const diffX = (pinPosition.x - itemPosition.x) / this.parentProjection.z;
+    const diffY = (pinPosition.y - itemPosition.y) / this.parentProjection.z;
+
+    pin[NAISC_PIN_POSITION] = {
+      x: this.projectionCurrent.x + diffX,
+      y: this.projectionCurrent.y + diffY
+    };
+  }
+
   private listenDragEvents(): void {
     const cDown = fromEvent<MouseEvent>(this.titleBarRef.nativeElement, 'mousedown');
     const cDrag = cDown.pipe(
@@ -318,19 +339,7 @@ export class NaiscItemComponent implements AfterViewInit, OnDestroy {
     }
 
     const localPosition = this.getItemPosition();
-
-    this.pinRefs.forEach(pinRef => {
-      const pin = pinRef.pin;
-      const pinPosition = pinRef.getPinPosition();
-
-      const diffX = (pinPosition.x - localPosition.x) / this.parentProjection.z;
-      const diffY = (pinPosition.y - localPosition.y) / this.parentProjection.z;
-
-      pin[NAISC_PIN_POSITION] = {
-        x: this.projectionCurrent.x + diffX,
-        y: this.projectionCurrent.y + diffY
-      };
-    });
+    this.pinRefs.forEach(pinRef => this.calculatePinPosition(pinRef.pin, pinRef.getPinPosition(), localPosition));
   }
 
   private getItemPosition(): ViewProjection {

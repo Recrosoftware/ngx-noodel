@@ -19,7 +19,13 @@ import {
 
 import {fromEvent, merge, Observable, Subject, Subscription} from 'rxjs';
 import {filter, share, startWith, switchMap, take, takeUntil, tap} from 'rxjs/operators';
-import {cancelAsyncMicrotask, runAsyncMicrotask, validateNaiscContent} from './internal/functions';
+import {
+  cancelAsyncMicrotask,
+  deepCopy,
+  runAsyncMicrotask,
+  runAsyncTask,
+  validateNaiscContent
+} from './internal/functions';
 
 import {
   NaiscItemInstanceRef,
@@ -31,6 +37,7 @@ import {
 } from './internal/models';
 import {NAISC_METADATA_ACCESSOR} from './internal/symbols';
 import {NaiscItemComponent} from './naisc-item.component';
+import {NaiscDump} from './shared/naisc-dump';
 
 import {NaiscItemContent} from './shared/naisc-item-content';
 import {NaiscItemDescriptor, NaiscPinDescriptor} from './shared/naisc-item-descriptor';
@@ -135,19 +142,20 @@ export class Naisc implements OnInit, AfterViewInit, OnChanges, OnDestroy {
     this.animationFunction = transformLinear;
     this.removeItemIconClass = DEFAULT_CLOSE_ICON;
 
-    const dBlur = fromEvent<Event>(document, 'blur');
     const dUp = fromEvent<MouseEvent>(document, 'mouseup');
+    const dBlur = fromEvent<Event>(document, 'blur');
+    const cDown = fromEvent<MouseEvent>(this.el.nativeElement, 'mousedown');
 
+    this.onMove = fromEvent<MouseEvent>(this.el.nativeElement, 'mousemove').pipe(share());
+    this.onZoom = fromEvent<WheelEvent>(this.el.nativeElement, 'wheel');
     this.onActionEnd = merge(dBlur, dUp).pipe(
       share(),
       take(1)
     );
 
-    const cMove = fromEvent<MouseEvent>(this.el.nativeElement, 'mousemove').pipe(share());
-    const cDown = fromEvent<MouseEvent>(this.el.nativeElement, 'mousedown');
-    const cDrag = cDown.pipe(
+    this.onDrag = cDown.pipe(
       filter(down => down.button === 0), // Left Click
-      switchMap(down => cMove.pipe(
+      switchMap(down => this.onMove.pipe(
         tap(() => this.dragging = true),
         startWith(down),
         takeUntil(
@@ -158,11 +166,6 @@ export class Naisc implements OnInit, AfterViewInit, OnChanges, OnDestroy {
       )),
       share()
     );
-    const cZoom = fromEvent<WheelEvent>(this.el.nativeElement, 'wheel');
-
-    this.onDrag = cDrag;
-    this.onZoom = cZoom;
-    this.onMove = cMove;
   }
 
   // region Lifecycle
@@ -244,6 +247,45 @@ export class Naisc implements OnInit, AfterViewInit, OnChanges, OnDestroy {
   // endregion
 
   // region Logic
+  public export(): NaiscDump {
+    const items = this.items.map(i => i.data);
+
+    return {
+      items: deepCopy(items),
+      links: items.map(i => i.pins.out.map(pin => {
+        const link = this.links.find(l => l.from.pin === pin);
+        if (!link) {
+          return null;
+        }
+
+        try {
+          const pinIdx = link.to.item.pins.in.indexOf(link.to.pin);
+          const itemIdx = items.indexOf(link.to.item);
+
+          if (pinIdx >= 0 || itemIdx >= 0) {
+            return {pinIdx, itemIdx};
+          }
+        } catch (e) {
+        }
+
+        return null;
+      }))
+    };
+  }
+
+  public import(dump: NaiscDump) {
+    this.clear();
+
+    dump.items.forEach(d => this.add(d));
+    runAsyncTask(() => {
+      dump.links.forEach((iL, iI) => iL.forEach((pL, pI) => {
+        if (pL != null) {
+          this.addLink(dump.items[iI], pI, dump.items[pL.itemIdx], pL.pinIdx);
+        }
+      }));
+    });
+  }
+
   public instantiateFrom(template: Type<NaiscItemContent>, position?: { x: 0, y: 0 }): NaiscItemDescriptor {
     validateNaiscContent(template);
 
@@ -315,6 +357,49 @@ export class Naisc implements OnInit, AfterViewInit, OnChanges, OnDestroy {
     this.links = [];
   }
 
+  public addLink(itemFrom: NaiscItemDescriptor,
+                 pinFrom: NaiscPinDescriptor | number,
+                 itemTo: NaiscItemDescriptor,
+                 pinTo: NaiscPinDescriptor | number): void {
+    if (!itemFrom || !itemTo) {
+      return;
+    }
+
+    if (typeof pinFrom === 'number') {
+      pinFrom = itemFrom.pins.out[pinFrom];
+    }
+
+    if (typeof pinTo === 'number') {
+      pinTo = itemTo.pins.in[pinTo];
+    }
+
+    if (!pinFrom || !pinTo) {
+      return;
+    }
+
+    if (this.items.every(i => i.data !== itemFrom) || this.items.every(i => i.data !== itemFrom)) {
+      return;
+    }
+
+    const link: NaiscItemLink = {
+      from: {
+        item: itemFrom,
+        pin: pinFrom as NaiscPinDescriptor
+      },
+      to: {
+        item: itemTo,
+        pin: pinTo as NaiscPinDescriptor
+      }
+    };
+
+    this.linkEvents.next({
+      actionType: 'add',
+      refFrom: link.from,
+      refTo: link.to
+    });
+    this.links = [...this.links, link];
+  }
+
   private onLink(action: 'start' | 'end' | 'remove', item: NaiscItemDescriptor, pin: NaiscPinDescriptor): void {
     switch (action) {
       case 'start':
@@ -358,28 +443,15 @@ export class Naisc implements OnInit, AfterViewInit, OnChanges, OnDestroy {
           this.removeLink(pin);
         }
 
-        const link: NaiscItemLink = {
-          from: {
-            item: this.linkingRef.item,
-            pin: this.linkingRef.pin
-          },
-          to: {
-            item: item,
-            pin: pin
-          }
-        };
+        const iF = this.linkingRef.item;
+        const pF = this.linkingRef.pin;
 
         this.linkSubscription.unsubscribe();
 
         this.linkingRef = null;
         this.linkEvents.next({actionType: 'end'});
 
-        this.linkEvents.next({
-          actionType: 'add',
-          refFrom: link.from,
-          refTo: link.to
-        });
-        this.links = [...this.links, link];
+        this.addLink(iF, pF, item, pin);
         break;
       case 'remove':
         this.removeLink(pin);

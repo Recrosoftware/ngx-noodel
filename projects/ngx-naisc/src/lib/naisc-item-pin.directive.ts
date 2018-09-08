@@ -1,4 +1,14 @@
-import {Directive, ElementRef, EventEmitter, HostListener, Input, OnDestroy, OnInit, Output} from '@angular/core';
+import {
+  AfterViewInit,
+  Directive,
+  ElementRef,
+  EventEmitter,
+  HostListener,
+  Input,
+  OnDestroy,
+  OnInit,
+  Output
+} from '@angular/core';
 import {Observable, Subscription} from 'rxjs';
 
 import {NaiscLinkEvent, ViewProjection} from './internal/models';
@@ -17,7 +27,7 @@ import {NaiscItemDescriptor, NaiscPinDescriptor} from './shared/naisc-item-descr
     '[class.highlight]': 'highlight'
   }
 })
-export class NaiscItemPinDirective implements OnInit, OnDestroy {
+export class NaiscItemPinDirective implements OnInit, AfterViewInit, OnDestroy {
   /* tslint:disable-next-line:no-input-rename */
   @Input('naiscItemPin') public pin: NaiscPinDescriptor & {
     [NAISC_PIN_POSITION]?: ViewProjection;
@@ -28,9 +38,10 @@ export class NaiscItemPinDirective implements OnInit, OnDestroy {
 
   @Input() public linkEvents: Observable<NaiscLinkEvent>;
 
-  @Output() public removeLinks: EventEmitter<MouseEvent>;
-  @Output() public linkStart: EventEmitter<MouseEvent>;
   @Output() public linkEnd: EventEmitter<MouseEvent>;
+  @Output() public linkStart: EventEmitter<MouseEvent>;
+  @Output() public removeLinks: EventEmitter<MouseEvent>;
+  @Output() public calculatePosition: EventEmitter<ViewProjection>;
 
   public active: boolean;
   public invalid: boolean;
@@ -41,9 +52,10 @@ export class NaiscItemPinDirective implements OnInit, OnDestroy {
   constructor(private el: ElementRef) {
     this.resetState();
 
-    this.removeLinks = new EventEmitter();
-    this.linkStart = new EventEmitter();
     this.linkEnd = new EventEmitter();
+    this.linkStart = new EventEmitter();
+    this.removeLinks = new EventEmitter();
+    this.calculatePosition = new EventEmitter();
   }
 
   public ngOnInit(): void {
@@ -64,6 +76,10 @@ export class NaiscItemPinDirective implements OnInit, OnDestroy {
           break;
       }
     });
+  }
+
+  public ngAfterViewInit(): void {
+    this.calculatePosition.emit(this.getPinPosition());
   }
 
   public ngOnDestroy(): void {

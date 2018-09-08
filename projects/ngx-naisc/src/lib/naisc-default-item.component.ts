@@ -8,14 +8,18 @@ import {NaiscItemContent} from './shared/naisc-item-content';
 })
 export class NaiscDefaultItemComponent extends NaiscItemContent {
   public getTitle(): string {
-    return this.item.state['title'] as string || '** No Title **';
+    return ('title' in this.item.state) ? this.item.state['title'] as string : '** No Title **';
   }
 
-  getInputPinName(idx: number): string {
-    return this.item.state['pins-in'] && this.item.state['pins-in'][idx] || '** No Name **';
+  public getInputPinName(idx: number): string {
+    return ('pins-in' in this.item.state) ? this.item.state['pins-in'][idx] as string : '** No Name **';
   }
 
-  getOutputPinName(idx: number): string {
-    return this.item.state['pins-out'] && this.item.state['pins-out'][idx] || '** No Name **';
+  public getOutputPinName(idx: number): string {
+    return ('pins-out' in this.item.state) ? this.item.state['pins-out'][idx] as string : '** No Name **';
+  }
+
+  public isPermanent(): boolean {
+    return !!this.item.state['permanent'];
   }
 }
