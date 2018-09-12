@@ -4,13 +4,13 @@
     "directive-selector": [
       true,
       "attribute",
-      "rs",
+      "naisc",
       "camelCase"
     ],
     "component-selector": [
       true,
       "element",
-      "rs",
+      "naisc",
       "kebab-case"
     ]
   }

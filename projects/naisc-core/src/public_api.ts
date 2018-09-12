@@ -1,5 +1,5 @@
 /*
- * Public API Surface of ngx-naisc
+ * Public API Surface of @naisc/core
  */
 
 export * from './lib/naisc';
