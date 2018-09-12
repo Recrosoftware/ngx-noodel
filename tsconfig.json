@@ -19,8 +19,8 @@
     ],
     "paths": {
       "@naisc/core": [
-        // "dist/naisc-core"
-        "projects/naisc-core/src/debug"
+        "dist/naisc-core"
+        // "projects/naisc-core/src/debug" // For debugging purposes only
       ],
       "@naisc/core/*": [
         "dist/naisc-core/*"

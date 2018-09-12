@@ -1,1 +1,42 @@
-// TODO
+$naisc-item-min-width: 170px;
+$naisc-item-bg-color: #97d5dc;
+
+$naisc-item-track-height: 24px;
+$naisc-item-track-bg-color: #dcb45a;
+$naisc-item-track-close-btn-color: #d2412d;
+
+$naisc-link-color: #d2412d;
+$naisc-link-color-temp: #54be46;
+
+@mixin naisc-core() {
+  .naisc-item {
+    min-width: $naisc-item-min-width;
+    background-color: $naisc-item-bg-color;
+
+    .naisc-item-track-bar {
+      padding: 0 3px;
+
+      height: $naisc-item-track-height;
+      line-height: $naisc-item-track-height;
+
+      background-color: $naisc-item-track-bg-color;
+
+      .naisc-item-close-btn {
+        color: $naisc-item-track-close-btn-color;
+      }
+    }
+
+    .naisc-item-pin {
+      background-color: #54be46;
+      border: 1px solid #173a42;
+    }
+  }
+
+  .naisc-link {
+    stroke: $naisc-link-color;
+
+    &.naisc-temporary-link {
+      stroke: $naisc-link-color-temp;
+    }
+  }
+}
