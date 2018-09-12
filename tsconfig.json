@@ -19,11 +19,11 @@
     ],
     "paths": {
       "@naisc/core": [
-        // "dist/ngx-naisc"
-        "projects/ngx-naisc/src/debug"
+        // "dist/naisc-core"
+        "projects/naisc-core/src/debug"
       ],
       "@naisc/core/*": [
-        "dist/ngx-naisc/*"
+        "dist/naisc-core/*"
       ]
     }
   }
