@@ -127,7 +127,6 @@ export class NaiscItemComponent implements AfterViewInit, OnDestroy {
 
   @HostListener('mousedown', ['$event'])
   public onMouseDown(evt: Event): void {
-    evt.preventDefault();
     evt.stopPropagation();
   }
 
