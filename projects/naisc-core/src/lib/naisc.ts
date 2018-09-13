@@ -527,6 +527,10 @@ export class Naisc implements OnInit, AfterViewInit, OnChanges, OnDestroy {
     }
   }
 
+  public getZoom(): number {
+    return this.projectionTarget.z;
+  }
+
   public setCenter(center: { x: number, y: number },
                    options?: { triggerRender?: boolean, renderWithAnimations?: boolean, deferred?: boolean }): void {
     this.projectionTarget.x = -center.x * this.projectionTarget.z;
@@ -546,6 +550,13 @@ export class Naisc implements OnInit, AfterViewInit, OnChanges, OnDestroy {
         this.render(renderAnimations);
       }
     }
+  }
+
+  public getCenter(): { x: number, y: number } {
+    const x = -this.projectionTarget.x / this.projectionTarget.z;
+    const y = -this.projectionTarget.y / this.projectionTarget.z;
+
+    return {x, y};
   }
 
   public fitView(extent?: { top: number, right: number, bottom: number, left: number }, useAnimations?: boolean): void {
