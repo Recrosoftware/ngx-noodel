@@ -1,5 +1,7 @@
-@import "../projects/naisc-core/src/resources/themes/pre-built/default-theme";
+@import "../projects/naisc-core/src/resources/themes/theme-builder";
 
 body {
   background-color: #173a42;
 }
+
+@include naisc-core();

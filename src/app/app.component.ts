@@ -4,7 +4,7 @@ import {TestContentComponent} from './test-content.component';
 
 
 @Component({
-  selector: 'rs-root',
+  selector: 'naisc-showcase',
   template: `
     <div naisc [templates]="templates"></div>
 
@@ -98,10 +98,17 @@ export class AppComponent {
       type: 'node02',
       position: {x: Math.random() * 1000 - 500, y: Math.random() * 1000 - 500},
       pins: {
-        in: [],
-        out: []
+        in: [
+          {type: 'c', multiple: true}
+        ],
+        out: [
+          {type: 'c', multiple: true}
+        ]
       },
-      state: {'title': 'TestNode'}
+      state: {
+        'title': 'TestNode',
+        'permanent': false
+      }
     });
   }
 

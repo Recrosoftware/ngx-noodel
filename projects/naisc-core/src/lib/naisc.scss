@@ -136,6 +136,10 @@
           &.active {
             cursor: pointer;
           }
+
+          &.invalid {
+            cursor: not-allowed;
+          }
         }
       }
     }

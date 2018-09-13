@@ -1,29 +1,3 @@
-.naisc-item {
-  background-color: #97d5dc;
-  min-width: 170px;
+@import "../theme-builder";
 
-  .naisc-item-track-bar {
-    background-color: #dcb45a;
-    padding: 0 3px;
-
-    line-height: 24px;
-    height: 24px;
-
-    .naisc-item-close-btn {
-      color: #d2412d;
-    }
-  }
-
-  .naisc-item-pin {
-    background-color: #54be46;
-    border: 1px solid #173a42;
-  }
-}
-
-.naisc-link {
-  stroke: #d2412d;
-
-  &.naisc-temporary-link {
-    stroke: #54be46;
-  }
-}
+@include naisc-core();

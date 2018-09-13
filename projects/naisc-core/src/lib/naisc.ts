@@ -133,8 +133,6 @@ export class Naisc implements OnInit, AfterViewInit, OnChanges, OnDestroy {
 
     this.linkEvents = new Subject();
 
-    this.linkEvents.subscribe(e => console.log(e)); // TODO: Delete
-
     this.snap = DEFAULT_SNAP;
     this.minZoom = DEFAULT_MIN_ZOOM;
     this.maxZoom = DEFAULT_MAX_ZOOM;
@@ -244,6 +242,7 @@ export class Naisc implements OnInit, AfterViewInit, OnChanges, OnDestroy {
     this.zoomSubscription.unsubscribe();
     this.linkSubscription.unsubscribe();
   }
+
   // endregion
 
   // region Logic
@@ -478,6 +477,7 @@ export class Naisc implements OnInit, AfterViewInit, OnChanges, OnDestroy {
 
     this.links.slice();
   }
+
   // endregion
 
   // region Rendering
@@ -723,5 +723,6 @@ export class Naisc implements OnInit, AfterViewInit, OnChanges, OnDestroy {
       y: (y - this.projectionTarget.y) / this.projectionTarget.z
     };
   }
+
   // endregion
 }
