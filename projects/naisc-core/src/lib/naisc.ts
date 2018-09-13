@@ -285,7 +285,7 @@ export class Naisc implements OnInit, AfterViewInit, OnChanges, OnDestroy {
     });
   }
 
-  public instantiateFrom(template: Type<NaiscItemContent>, position?: { x: 0, y: 0 }): NaiscItemDescriptor {
+  public instantiateFrom(template: Type<NaiscItemContent>, position?: { x: number, y: number }): NaiscItemDescriptor {
     validateNaiscContent(template);
 
     if (!this.templates || this.templates.indexOf(template) < 0) {
