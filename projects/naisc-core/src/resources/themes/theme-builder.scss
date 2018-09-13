@@ -1,9 +1,12 @@
 $naisc-item-min-width: 170px;
 $naisc-item-bg-color: #97d5dc;
+$naisc-item-border-color: #628a8f;
+$naisc-item-text-color: #000000;
 
 $naisc-item-track-height: 24px;
 $naisc-item-track-bg-color: #dcb45a;
 $naisc-item-track-close-btn-color: #d2412d;
+$naisc-item-track-text-color: #000000;
 
 $naisc-link-color: #d2412d;
 $naisc-link-color-temp: #54be46;
@@ -31,7 +34,10 @@ $naisc-pin-highlight-hover-border: $naisc-pin-highlight-border;
 @mixin naisc-core() {
   .naisc-item {
     min-width: $naisc-item-min-width;
+
+    color: $naisc-item-text-color;
     background-color: $naisc-item-bg-color;
+    border: 1px solid $naisc-item-border-color;
 
     .naisc-item-track-bar {
       padding: 0 3px;
@@ -39,7 +45,9 @@ $naisc-pin-highlight-hover-border: $naisc-pin-highlight-border;
       height: $naisc-item-track-height;
       line-height: $naisc-item-track-height;
 
+      color: $naisc-item-track-text-color;
       background-color: $naisc-item-track-bg-color;
+      border-bottom: 1px solid $naisc-item-border-color;
 
       .naisc-item-close-btn {
         color: $naisc-item-track-close-btn-color;
