@@ -2,11 +2,11 @@
  * Public API Surface of @naisc/core
  */
 
-export * from './lib/naisc';
-export * from './lib/naisc.module';
+export {Naisc} from './lib/naisc';
+export {NaiscModule} from './lib/naisc.module';
 
-export * from './lib/shared/naisc-dump';
-export * from './lib/shared/naisc-item';
-export * from './lib/shared/naisc-item-content';
-export * from './lib/shared/naisc-item-descriptor';
-export * from './lib/shared/naisc-item-options';
+export {NaiscDump, NaiscLinkDump} from './lib/shared/naisc-dump';
+export {NaiscItem} from './lib/shared/naisc-item';
+export {NaiscItemContent} from './lib/shared/naisc-item-content';
+export {NaiscItemDescriptor, NaiscPinDescriptor} from './lib/shared/naisc-item-descriptor';
+export {NaiscItemOptions} from './lib/shared/naisc-item-options';

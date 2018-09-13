@@ -1,7 +1,7 @@
 import {CommonModule} from '@angular/common';
 import {NgModule} from '@angular/core';
 
-import {RsAsyncPipe} from './common';
+import {RsAsyncPipe} from './common/rs-async.pipe';
 
 import {Naisc} from './naisc';
 

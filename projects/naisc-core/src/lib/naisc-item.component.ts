@@ -19,7 +19,7 @@ import {
 import {fromEvent, Observable, Subscription} from 'rxjs';
 import {filter, share, startWith, switchMap, takeUntil, tap} from 'rxjs/operators';
 
-import {RsAsyncInput} from './common';
+import {RsAsyncInput} from './common/rs-async.pipe';
 import {runAsyncTask} from './internal/functions';
 import {NaiscLinkEvent, NaiscType, ViewProjection} from './internal/models';
 import {NAISC_METADATA_ACCESSOR, NAISC_PIN_POSITION} from './internal/symbols';
