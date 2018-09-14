@@ -5,11 +5,14 @@ import {
   ComponentFactory,
   ComponentFactoryResolver,
   ElementRef,
+  EventEmitter,
+  HostListener,
   Input,
   NgZone,
   OnChanges,
   OnDestroy,
   OnInit,
+  Output,
   SimpleChanges,
   Type,
   ViewChild,
@@ -19,6 +22,7 @@ import {
 
 import {fromEvent, merge, Observable, Subject, Subscription} from 'rxjs';
 import {filter, share, startWith, switchMap, take, takeUntil, tap} from 'rxjs/operators';
+
 import {
   cancelAsyncMicrotask,
   deepCopy,
@@ -26,7 +30,6 @@ import {
   runAsyncTask,
   validateNaiscContent
 } from './internal/functions';
-
 import {
   NaiscItemInstanceRef,
   NaiscItemLink,
@@ -36,12 +39,16 @@ import {
   ViewProjection
 } from './internal/models';
 import {NAISC_METADATA_ACCESSOR} from './internal/symbols';
-import {NaiscItemComponent} from './naisc-item.component';
-import {NaiscDump} from './shared/naisc-dump';
 
+import {NaiscItemComponent} from './naisc-item.component';
+
+import {NaiscDump} from './shared/naisc-dump';
+import {NaiscMouseEvent} from './shared/naisc-events';
 import {NaiscItemContent} from './shared/naisc-item-content';
 import {NaiscItemDescriptor, NaiscPinDescriptor} from './shared/naisc-item-descriptor';
 
+
+const DEFAULT_CLICK_MOVE_TOLERANCE = 5;
 
 const DEFAULT_SNAP = true;
 const DEFAULT_ANIMATION_DURATION = 300;
@@ -96,6 +103,11 @@ export class Naisc implements OnInit, AfterViewInit, OnChanges, OnDestroy {
   @Input() public animationFunction: (start: number, end: number, t: number) => number;
   @Input() public removeItemIconClass: string;
 
+  @Input() public clickMoveTolerance: number;
+
+  @Output() public clickLeft: EventEmitter<NaiscMouseEvent>;
+  @Output() public clickRight: EventEmitter<NaiscMouseEvent>;
+
   public linkingRef: NaiscItemLinkRef & { target: ViewProjection };
   public links: NaiscItemLink[] = [];
 
@@ -108,10 +120,16 @@ export class Naisc implements OnInit, AfterViewInit, OnChanges, OnDestroy {
   private zoomSubscription = Subscription.EMPTY;
   private linkSubscription = Subscription.EMPTY;
 
+  private lClickSubscription = Subscription.EMPTY;
+  private rClickSubscription = Subscription.EMPTY;
+
   private readonly onDrag: Observable<MouseEvent>;
   private readonly onMove: Observable<MouseEvent>;
   private readonly onZoom: Observable<WheelEvent>;
   private readonly onActionEnd: Observable<Event>;
+
+  private readonly onClickL: Observable<MouseEvent>;
+  private readonly onClickR: Observable<MouseEvent>;
 
   private readonly linkEvents: Subject<NaiscLinkEvent>;
 
@@ -131,6 +149,9 @@ export class Naisc implements OnInit, AfterViewInit, OnChanges, OnDestroy {
     this.projectionTarget = {x: 0, y: 0, z: 1};
     this.projectionCurrent = {x: 0, y: 0, z: 1};
 
+    this.clickLeft = new EventEmitter();
+    this.clickRight = new EventEmitter();
+
     this.linkEvents = new Subject();
 
     this.snap = DEFAULT_SNAP;
@@ -139,6 +160,7 @@ export class Naisc implements OnInit, AfterViewInit, OnChanges, OnDestroy {
     this.animationDuration = DEFAULT_ANIMATION_DURATION;
     this.animationFunction = transformLinear;
     this.removeItemIconClass = DEFAULT_CLOSE_ICON;
+    this.clickMoveTolerance = DEFAULT_CLICK_MOVE_TOLERANCE;
 
     const dUp = fromEvent<MouseEvent>(document, 'mouseup');
     const dBlur = fromEvent<Event>(document, 'blur');
@@ -163,6 +185,40 @@ export class Naisc implements OnInit, AfterViewInit, OnChanges, OnDestroy {
         )
       )),
       share()
+    );
+
+    this.onClickL = cDown.pipe(
+      filter(down => down.button === 0),
+      switchMap(down => dUp.pipe(
+        filter(up => up.button === 0),
+        take(1),
+        filter(up => {
+          return (
+            Math.abs(down.pageX - up.pageX) < this.clickMoveTolerance &&
+            Math.abs(down.pageY - up.pageY) < this.clickMoveTolerance
+          );
+        })
+      ))
+    );
+
+    this.onClickR = cDown.pipe(
+      filter(down => down.button === 2),
+      tap(e => { // Prevent user-agent context menu from opening
+        e.preventDefault();
+        e.stopPropagation();
+
+        e.cancelBubble = true;
+      }),
+      switchMap(down => dUp.pipe(
+        filter(up => up.button === 2),
+        take(1),
+        filter(up => {
+          return (
+            Math.abs(down.pageX - up.pageX) < this.clickMoveTolerance &&
+            Math.abs(down.pageY - up.pageY) < this.clickMoveTolerance
+          );
+        })
+      ))
     );
   }
 
@@ -208,6 +264,33 @@ export class Naisc implements OnInit, AfterViewInit, OnChanges, OnDestroy {
 
       this.render();
     });
+
+    this.lClickSubscription = this.onClickL.subscribe(evt => {
+      let {x, y} = this.getLocalPosition(this.getMousePositionInContainer(evt));
+
+      if (this.snap) {
+        x = Math.round(x / 10) * 10;
+        y = Math.round(y / 10) * 10;
+      }
+
+      this.clickLeft.emit({
+        event: evt,
+        localPosition: {x, y}
+      });
+    });
+    this.rClickSubscription = this.onClickR.subscribe(evt => {
+      let {x, y} = this.getLocalPosition(this.getMousePositionInContainer(evt));
+
+      if (this.snap) {
+        x = Math.round(x / 10) * 10;
+        y = Math.round(y / 10) * 10;
+      }
+
+      this.clickRight.emit({
+        event: evt,
+        localPosition: {x, y}
+      });
+    });
   }
 
   public ngAfterViewInit(): void {
@@ -241,6 +324,14 @@ export class Naisc implements OnInit, AfterViewInit, OnChanges, OnDestroy {
     this.dragSubscription.unsubscribe();
     this.zoomSubscription.unsubscribe();
     this.linkSubscription.unsubscribe();
+
+    this.lClickSubscription.unsubscribe();
+    this.rClickSubscription.unsubscribe();
+  }
+
+  @HostListener('contextmenu', ['$event'])
+  public ignoreContextMenu(evt: Event): void {
+    evt.preventDefault();
   }
 
   // endregion

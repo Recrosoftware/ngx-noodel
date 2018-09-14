@@ -1,12 +1,14 @@
 import {Component, ViewChild} from '@angular/core';
-import {Naisc, NaiscItemDescriptor} from '@naisc/core';
+import {Naisc, NaiscItemDescriptor, NaiscMouseEvent} from '@naisc/core';
 import {TestContentComponent} from './test-content.component';
 
 
 @Component({
   selector: 'naisc-showcase',
   template: `
-    <div naisc [templates]="templates"></div>
+    <div naisc [templates]="templates"
+         (clickLeft)="logMouse($event, 'left')"
+         (clickRight)="logMouse($event, 'right')"></div>
 
     <button (click)="add()">ADD</button>
     <button (click)="remove()">REMOVE</button>
@@ -114,6 +116,10 @@ export class AppComponent {
 
   public clear(): void {
     this.naisc.clear();
+  }
+
+  public logMouse(evt: NaiscMouseEvent, action: string) {
+    console.log(action, evt.localPosition.x, evt.localPosition.y);
   }
 
   public animate(): void {
