@@ -44,8 +44,10 @@ import {NaiscItemComponent} from './naisc-item.component';
 
 import {NaiscDump} from './shared/naisc-dump';
 import {NaiscMouseEvent} from './shared/naisc-events';
+import {NaiscExtent} from './shared/naisc-extent';
 import {NaiscItemContent} from './shared/naisc-item-content';
 import {NaiscItemDescriptor, NaiscPinDescriptor} from './shared/naisc-item-descriptor';
+import {NaiscValidationResult} from './shared/naisc-validation';
 
 
 const DEFAULT_CLICK_MOVE_TOLERANCE = 5;
@@ -376,6 +378,16 @@ export class Naisc implements OnInit, AfterViewInit, OnChanges, OnDestroy {
     });
   }
 
+  public validate(): NaiscValidationResult[] {
+    return this.items
+      .map(itemRef => ({
+        item: itemRef.data,
+        errors: itemRef.ref.instance.triggerValidation(),
+        extent: itemRef.ref.instance.getItemExtent()
+      }))
+      .filter(errors => !!errors);
+  }
+
   public instantiateFrom(template: Type<NaiscItemContent>, position?: { x: number, y: number }): NaiscItemDescriptor {
     validateNaiscContent(template);
 
@@ -650,7 +662,7 @@ export class Naisc implements OnInit, AfterViewInit, OnChanges, OnDestroy {
     return {x, y};
   }
 
-  public fitView(extent?: { top: number, right: number, bottom: number, left: number }, useAnimations?: boolean): void {
+  public fitView(extent?: NaiscExtent, useAnimations?: boolean): void {
     let eWidth: number;
     let eHeight: number;
     let eCenterX: number;
@@ -668,17 +680,17 @@ export class Naisc implements OnInit, AfterViewInit, OnChanges, OnDestroy {
         this.items.forEach(item => {
           const e = item.ref.instance.getItemExtent();
 
-          if (top > e.top) {
-            top = e.top;
+          if (top > e[0]) {
+            top = e[0];
           }
-          if (right < e.right) {
-            right = e.right;
+          if (right < e[1]) {
+            right = e[1];
           }
-          if (bottom < e.bottom) {
-            bottom = e.bottom;
+          if (bottom < e[2]) {
+            bottom = e[2];
           }
-          if (left > e.left) {
-            left = e.left;
+          if (left > e[3]) {
+            left = e[3];
           }
         });
 
@@ -691,11 +703,11 @@ export class Naisc implements OnInit, AfterViewInit, OnChanges, OnDestroy {
         noExtent = true;
       }
     } else {
-      eWidth = Math.abs(extent.right - extent.left);
-      eHeight = Math.abs(extent.bottom - extent.top);
+      eWidth = Math.abs(extent[1] - extent[3]);
+      eHeight = Math.abs(extent[2] - extent[0]);
 
-      eCenterX = (extent.right + extent.left) / 2;
-      eCenterY = (extent.bottom + extent.top) / 2;
+      eCenterX = (extent[1] + extent[3]) / 2;
+      eCenterY = (extent[2] + extent[0]) / 2;
     }
 
     if (noExtent) {

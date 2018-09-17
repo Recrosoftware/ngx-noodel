@@ -26,8 +26,10 @@ import {NAISC_METADATA_ACCESSOR, NAISC_PIN_POSITION} from './internal/symbols';
 
 import {NaiscDefaultItemComponent} from './naisc-default-item.component';
 import {NaiscItemPinDirective} from './naisc-item-pin.directive';
+import {NaiscExtent} from './shared/naisc-extent';
 import {NaiscItemContent} from './shared/naisc-item-content';
 import {NaiscItemDescriptor, NaiscPinDescriptor} from './shared/naisc-item-descriptor';
+import {NaiscValidationError} from './shared/naisc-validation';
 
 
 @Component({
@@ -153,6 +155,10 @@ export class NaiscItemComponent implements AfterViewInit, OnDestroy {
     this.removeFn();
   }
 
+  public triggerValidation(): NaiscValidationError {
+    return this.contentRef ? this.contentRef.instance.onValidate() : null;
+  }
+
   public updateContentTemplate(): void {
     if (!this.itemContentContainer) {
       return;
@@ -245,7 +251,7 @@ export class NaiscItemComponent implements AfterViewInit, OnDestroy {
     }
   }
 
-  public getItemExtent(): { top: number, right: number, bottom: number, left: number } {
+  public getItemExtent(): NaiscExtent {
     const c = this.el.nativeElement as HTMLDivElement;
 
     let width = 100;
@@ -258,12 +264,12 @@ export class NaiscItemComponent implements AfterViewInit, OnDestroy {
       height = rect.height / this.parentProjection.z;
     }
 
-    return {
-      top: this.item.position.y,
-      left: this.item.position.x,
-      bottom: this.item.position.y + height,
-      right: this.item.position.x + width
-    };
+    return [
+      this.item.position.y,
+      this.item.position.x + width,
+      this.item.position.y + height,
+      this.item.position.x
+    ];
   }
 
   public calculatePinPosition(pin: NaiscPinDescriptor,
