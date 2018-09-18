@@ -120,6 +120,8 @@ export class Naisc implements OnInit, AfterViewInit, OnChanges, OnDestroy {
   @Output() public itemAdded = new EventEmitter<NaiscItemDescriptor>();
   @Output() public itemRemoved = new EventEmitter<NaiscItemDescriptor>();
 
+  @Output() public stateChanged = new EventEmitter<void>();
+
   public linkingRef: NaiscItemLinkRef & { target: ViewProjection };
   public links: NaiscItemLink[] = [];
 
@@ -136,6 +138,9 @@ export class Naisc implements OnInit, AfterViewInit, OnChanges, OnDestroy {
 
   private lClickSubscription = Subscription.EMPTY;
   private rClickSubscription = Subscription.EMPTY;
+
+  private removing = false;
+  private importing = false;
 
   private readonly onDrag: Observable<MouseEvent>;
   private readonly onMove: Observable<MouseEvent>;
@@ -369,6 +374,8 @@ export class Naisc implements OnInit, AfterViewInit, OnChanges, OnDestroy {
   }
 
   public import(dump: NaiscDump) {
+    this.importing = true;
+
     this.clear();
 
     dump.items.forEach(d => this.add(d));
@@ -379,6 +386,9 @@ export class Naisc implements OnInit, AfterViewInit, OnChanges, OnDestroy {
         }
       }));
     });
+
+    this.importing = false;
+    this.stateChanged.emit();
   }
 
   public validate(): NaiscValidationResult[] {
@@ -423,6 +433,7 @@ export class Naisc implements OnInit, AfterViewInit, OnChanges, OnDestroy {
     instance.overlayRef = this.getOverlayElement();
     instance.currentZIndex = ++this.currentItemsZIndex;
 
+    instance.fireStateChange = () => this.stateChanged.emit();
     instance.generateZIndex = (z) => z < this.currentItemsZIndex ? ++this.currentItemsZIndex : z;
     instance.removeFn = () => this.remove(item);
 
@@ -444,6 +455,9 @@ export class Naisc implements OnInit, AfterViewInit, OnChanges, OnDestroy {
     });
 
     this.itemAdded.emit(item);
+    if (!this.importing) {
+      this.stateChanged.emit();
+    }
   }
 
   public remove(item: NaiscItemDescriptor): void {
@@ -453,8 +467,10 @@ export class Naisc implements OnInit, AfterViewInit, OnChanges, OnDestroy {
       return;
     }
 
+    this.removing = true;
     item.pins.in.forEach(p => this.removeLink(p));
     item.pins.out.forEach(p => this.removeLink(p));
+    this.removing = false;
 
     const itemRef = this.items[itemIdx].ref;
     itemRef.destroy();
@@ -462,6 +478,7 @@ export class Naisc implements OnInit, AfterViewInit, OnChanges, OnDestroy {
     this.items.splice(itemIdx, 1);
 
     this.itemRemoved.emit(item);
+    this.stateChanged.emit();
   }
 
   public clear(): void {
@@ -470,6 +487,9 @@ export class Naisc implements OnInit, AfterViewInit, OnChanges, OnDestroy {
     this.links = [];
 
     this.currentItemsZIndex = 0;
+    if (!this.importing) {
+      this.stateChanged.emit();
+    }
   }
 
   public addLink(itemFrom: NaiscItemDescriptor,
@@ -513,6 +533,10 @@ export class Naisc implements OnInit, AfterViewInit, OnChanges, OnDestroy {
       refTo: link.to
     });
     this.links = [...this.links, link];
+
+    if (!this.importing) {
+      this.stateChanged.emit();
+    }
   }
 
   private onLink(action: 'start' | 'end' | 'remove', item: NaiscItemDescriptor, pin: NaiscPinDescriptor): void {
@@ -592,6 +616,9 @@ export class Naisc implements OnInit, AfterViewInit, OnChanges, OnDestroy {
     });
 
     this.links.slice();
+    if (!this.removing) {
+      this.stateChanged.emit();
+    }
   }
 
   // endregion

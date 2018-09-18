@@ -88,6 +88,7 @@ export class NaiscItemComponent implements AfterViewInit, OnDestroy {
   public overlayRef: HTMLElement;
   public currentZIndex: number;
 
+  public fireStateChange: () => void;
   public generateZIndex: (zindex: number) => number;
   public removeFn: () => void;
 
@@ -191,6 +192,7 @@ export class NaiscItemComponent implements AfterViewInit, OnDestroy {
 
     this.contentRef.instance.item = this.item;
     this.contentRef.instance.overlay = this.overlayRef;
+    this.contentRef.instance.notifyChanges = this.fireStateChange;
 
     runAsyncTask(() => this.render(false, true, true));
   }
@@ -303,7 +305,8 @@ export class NaiscItemComponent implements AfterViewInit, OnDestroy {
         startWith(down),
         takeUntil(
           this.onActionEnd.pipe(
-            tap(() => this.dragging = false)
+            tap(() => this.dragging = false),
+            tap(() => this.fireStateChange())
           )
         )
       )),

@@ -1,5 +1,5 @@
-import {Component, ViewChild} from '@angular/core';
-import {Naisc, NaiscItemDescriptor, NaiscMouseEvent} from '@naisc/core';
+import {AfterViewInit, Component, ViewChild} from '@angular/core';
+import {Naisc, NaiscDump, NaiscItemDescriptor, NaiscMouseEvent} from '@naisc/core';
 import {TestContentComponent} from './test-content.component';
 
 
@@ -7,7 +7,7 @@ import {TestContentComponent} from './test-content.component';
   selector: 'naisc-showcase',
   template: `
     <div naisc [templates]="templates"
-         (itemRemoved)="onRemove($event)"
+         (stateChanged)="onState()"
          (clickLeft)="logMouse($event, 'left')"
          (clickRight)="logMouse($event, 'right')"></div>
 
@@ -16,6 +16,8 @@ import {TestContentComponent} from './test-content.component';
     <button (click)="addNew()">ADD_NEW</button>
     <button (click)="clear()">CLEAR</button>
     <button (click)="animate()">ANIMATE</button>
+    <button (click)="doUndo()">UNDO</button>
+    <button (click)="doRedo()">REDO</button>
     <button (click)="fit()">FIT</button>
     <button (click)="setCenter()">GOTO 100 100</button>
     <button (click)="setZoom()">ZOOM 3</button>
@@ -32,8 +34,14 @@ import {TestContentComponent} from './test-content.component';
     }
   `]
 })
-export class AppComponent {
+export class AppComponent implements AfterViewInit {
   @ViewChild(Naisc) public naisc: Naisc;
+
+  public undoing = false;
+
+  public state: NaiscDump;
+  public undo: NaiscDump[] = [];
+  public redo: NaiscDump[] = [];
 
   public templates = [
     TestContentComponent
@@ -61,6 +69,10 @@ export class AppComponent {
   };
 
   private dump: string;
+
+  public ngAfterViewInit(): void {
+    this.state = this.naisc.export();
+  }
 
   public fit() {
     this.naisc.fitView();
@@ -123,8 +135,38 @@ export class AppComponent {
     console.log(action, evt.localPosition.x, evt.localPosition.y);
   }
 
-  public onRemove(desc: NaiscItemDescriptor): void {
-    console.log(desc);
+  public doUndo(): void {
+    if (this.undo.length > 0) {
+      this.undoing = true;
+
+      this.redo.splice(0, 0, this.state);
+      this.state = this.undo.splice(0, 1)[0];
+      this.naisc.import(this.state);
+    }
+  }
+
+  public doRedo(): void {
+    if (this.redo.length > 0) {
+      this.undoing = true;
+
+      this.undo.splice(0, 0, this.state);
+      this.state = this.redo.splice(0, 1)[0];
+      this.naisc.import(this.state);
+    }
+  }
+
+  public onState(): void {
+    if (this.undoing) {
+      this.undoing = false;
+      return;
+    }
+
+    this.redo.length = 0;
+
+    if (this.state) {
+      this.undo.splice(0, 0, this.state);
+    }
+    this.state = this.naisc.export();
   }
 
   public animate(): void {
