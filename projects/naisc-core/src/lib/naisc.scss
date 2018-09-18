@@ -35,13 +35,29 @@
     & > svg.naisc-links {
       @include absoluteBox();
 
-      z-index: -1;
+      z-index: 0;
 
       path.naisc-link {
+        z-index: 0;
+
         fill: none;
         stroke-width: 3px;
         stroke-linecap: round;
+
+        .naisc-temporary-link {
+          z-index: 1;
+        }
       }
+    }
+
+    & > div.naisc-items {
+      @include absoluteBox();
+      z-index: 1;
+    }
+
+    & > div.naisc-overlay {
+      @include absoluteBox();
+      z-index: 2;
     }
   }
 }

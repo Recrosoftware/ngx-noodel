@@ -9,6 +9,7 @@ const DEFAULT_PIN_NAME = '---';
 
 export abstract class NaiscItemContent {
   @Input() public item: NaiscItemDescriptor;
+  @Input() public overlay: HTMLElement;
 
   public abstract getTitle(): string | Promise<string> | Observable<string>;
 

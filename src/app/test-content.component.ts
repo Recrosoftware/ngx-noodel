@@ -1,9 +1,11 @@
-import {Component} from '@angular/core';
+import {AfterViewInit, Component, ElementRef, ViewChild} from '@angular/core';
 import {NaiscItem, NaiscItemContent} from '@naisc/core';
 
 
 @Component({
   template: `
+    <div #testRef>test</div>
+
     Hello World
   `
 })
@@ -15,8 +17,14 @@ import {NaiscItem, NaiscItemContent} from '@naisc/core';
     {type: 'a', multiple: false}
   ]
 })
-export class TestContentComponent extends NaiscItemContent {
+export class TestContentComponent extends NaiscItemContent implements AfterViewInit {
+  @ViewChild('testRef') public testRef: ElementRef;
+
   private readonly title = 'My Node';
+
+  public ngAfterViewInit(): void {
+    // this.overlay.appendChild(this.testRef.nativeElement);
+  }
 
   public getTitle(): string {
     return this.title;

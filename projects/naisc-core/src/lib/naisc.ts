@@ -70,8 +70,6 @@ function transformLinear(start: number, end: number, t: number): number {
   exportAs: 'naisc',
   template: `
     <div #view class="naisc-view">
-      <ng-container #itemsContainer></ng-container>
-
       <svg class="naisc-links">
         <path *ngIf="linkingRef" class="naisc-link naisc-temporary-link" naiscItemLink
               [sourcePin]="linkingRef.pin" [targetPosition]="linkingRef.target"></path>
@@ -79,6 +77,12 @@ function transformLinear(start: number, end: number, t: number): number {
         <path *ngFor="let link of links" class="naisc-link" naiscItemLink
               [sourcePin]="link.from.pin" [targetPin]="link.to.pin"></path>
       </svg>
+
+      <div class="naisc-items">
+        <ng-container #itemsContainer></ng-container>
+      </div>
+
+      <div #overlay class="naisc-overlay"></div>
     </div>
   `,
   styleUrls: ['./naisc.scss'],
@@ -95,6 +99,9 @@ export class Naisc implements OnInit, AfterViewInit, OnChanges, OnDestroy {
 
   @ViewChild('itemsContainer', {read: ViewContainerRef})
   public containerRef: ViewContainerRef;
+
+  @ViewChild('overlay', {read: ElementRef})
+  public overlayRef: ElementRef;
 
   @Input() public snap: boolean;
   @Input() public minZoom: number;
@@ -417,6 +424,7 @@ export class Naisc implements OnInit, AfterViewInit, OnChanges, OnDestroy {
     const instance = itemRef.instance;
 
     instance.item = item;
+    instance.overlayRef = this.getOverlayElement();
 
     instance.removeFn = () => this.remove(item);
     instance.onLink = (a, p) => this.onLink(a, item, p);
@@ -729,6 +737,10 @@ export class Naisc implements OnInit, AfterViewInit, OnChanges, OnDestroy {
     }
 
     this.requestRender(useAnimations);
+  }
+
+  public getOverlayElement(): HTMLElement {
+    return this.overlayRef.nativeElement;
   }
 
   private render(useAnimation: boolean = true, thisZone: boolean = false): void {

@@ -5,7 +5,6 @@ import {
   ComponentRef,
   ElementRef,
   HostListener,
-  Input,
   NgZone,
   OnDestroy,
   QueryList,
@@ -84,20 +83,21 @@ export class NaiscItemComponent implements AfterViewInit, OnDestroy {
 
   @ViewChildren(NaiscItemPinDirective) public pinRefs: QueryList<NaiscItemPinDirective>;
 
-  @Input() public item: NaiscItemDescriptor;
+  public item: NaiscItemDescriptor;
+  public overlayRef: HTMLElement;
 
-  @Input() public removeFn: () => void;
-  @Input() public onLink: (a: 'start' | 'end' | 'remove', p: NaiscPinDescriptor) => void;
-  @Input() public linkEvents: Observable<NaiscLinkEvent>;
-  @Input() public onMove: Observable<MouseEvent>;
-  @Input() public onActionEnd: Observable<Event>;
-  @Input() public parentProjection: ViewProjection;
+  public removeFn: () => void;
+  public onLink: (a: 'start' | 'end' | 'remove', p: NaiscPinDescriptor) => void;
+  public linkEvents: Observable<NaiscLinkEvent>;
+  public onMove: Observable<MouseEvent>;
+  public onActionEnd: Observable<Event>;
+  public parentProjection: ViewProjection;
 
-  @Input() public snap: boolean;
-  @Input() public templates: NaiscType[];
-  @Input() public animationDuration: number;
-  @Input() public animationFunction: (start: number, end: number, t: number) => number;
-  @Input() public removeItemIconClass: string;
+  public snap: boolean;
+  public templates: NaiscType[];
+  public animationDuration: number;
+  public animationFunction: (start: number, end: number, t: number) => number;
+  public removeItemIconClass: string;
 
   public readonly projectionCurrent: ViewProjection;
   private animationRequestRef: number;
@@ -184,6 +184,7 @@ export class NaiscItemComponent implements AfterViewInit, OnDestroy {
     this.contentRefType = templateType;
 
     this.contentRef.instance.item = this.item;
+    this.contentRef.instance.overlay = this.overlayRef;
 
     runAsyncTask(() => this.render(false, true, true));
   }
