@@ -36,6 +36,7 @@
       @include absoluteBox();
 
       z-index: 0;
+      pointer-events: none;
 
       path.naisc-link {
         z-index: 0;
@@ -58,6 +59,8 @@
     & > div.naisc-overlay {
       @include absoluteBox();
       z-index: 2;
+
+      pointer-events: none;
     }
   }
 }

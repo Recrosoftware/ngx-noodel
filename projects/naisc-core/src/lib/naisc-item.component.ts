@@ -70,7 +70,8 @@ import {NaiscValidationError} from './shared/naisc-validation';
     </div>
   `,
   host: {
-    'class': 'naisc-item'
+    'class': 'naisc-item',
+    '[style.z-index]': 'currentZIndex'
   },
   entryComponents: [
     NaiscDefaultItemComponent
@@ -85,8 +86,11 @@ export class NaiscItemComponent implements AfterViewInit, OnDestroy {
 
   public item: NaiscItemDescriptor;
   public overlayRef: HTMLElement;
+  public currentZIndex: number;
 
+  public generateZIndex: (zindex: number) => number;
   public removeFn: () => void;
+
   public onLink: (a: 'start' | 'end' | 'remove', p: NaiscPinDescriptor) => void;
   public linkEvents: Observable<NaiscLinkEvent>;
   public onMove: Observable<MouseEvent>;
@@ -130,6 +134,8 @@ export class NaiscItemComponent implements AfterViewInit, OnDestroy {
   @HostListener('mousedown', ['$event'])
   public onMouseDown(evt: Event): void {
     evt.stopPropagation();
+
+    this.updateZIndex();
   }
 
   public getTitle(): RsAsyncInput<string> {
@@ -192,6 +198,8 @@ export class NaiscItemComponent implements AfterViewInit, OnDestroy {
   public onLinkInternal(a: 'start' | 'end' | 'remove', p: NaiscPinDescriptor): void {
     this.render(false, true, true);
     this.onLink(a, p);
+
+    this.updateZIndex();
   }
 
   public render(useAnimations: boolean = false, forced: boolean = false, thisZone: boolean = false): void {
@@ -288,6 +296,7 @@ export class NaiscItemComponent implements AfterViewInit, OnDestroy {
   private listenDragEvents(): void {
     const cDown = fromEvent<MouseEvent>(this.titleBarRef.nativeElement, 'mousedown');
     const cDrag = cDown.pipe(
+      tap(() => this.updateZIndex()),
       filter(down => down.button === 0), // Left Click
       switchMap(down => this.onMove.pipe(
         tap(() => this.dragging = true),
@@ -337,6 +346,10 @@ export class NaiscItemComponent implements AfterViewInit, OnDestroy {
 
       this.render();
     });
+  }
+
+  private updateZIndex(): void {
+    this.currentZIndex = this.generateZIndex(this.currentZIndex);
   }
 
   private recalculatePinsPosition(): void {

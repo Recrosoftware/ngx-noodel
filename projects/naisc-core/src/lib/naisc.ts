@@ -120,6 +120,8 @@ export class Naisc implements OnInit, AfterViewInit, OnChanges, OnDestroy {
   public linkingRef: NaiscItemLinkRef & { target: ViewProjection };
   public links: NaiscItemLink[] = [];
 
+  private currentItemsZIndex: number;
+
   private dragging: boolean;
 
   private deferredRenderRef: number;
@@ -157,6 +159,8 @@ export class Naisc implements OnInit, AfterViewInit, OnChanges, OnDestroy {
 
     this.projectionTarget = {x: 0, y: 0, z: 1};
     this.projectionCurrent = {x: 0, y: 0, z: 1};
+
+    this.currentItemsZIndex = 0;
 
     this.clickLeft = new EventEmitter();
     this.clickRight = new EventEmitter();
@@ -425,8 +429,11 @@ export class Naisc implements OnInit, AfterViewInit, OnChanges, OnDestroy {
 
     instance.item = item;
     instance.overlayRef = this.getOverlayElement();
+    instance.currentZIndex = ++this.currentItemsZIndex;
 
+    instance.generateZIndex = (z) => z < this.currentItemsZIndex ? ++this.currentItemsZIndex : z;
     instance.removeFn = () => this.remove(item);
+
     instance.onLink = (a, p) => this.onLink(a, item, p);
     instance.linkEvents = this.linkEvents;
     instance.onMove = this.onMove;
@@ -465,6 +472,8 @@ export class Naisc implements OnInit, AfterViewInit, OnChanges, OnDestroy {
     this.containerRef.clear();
     this.items.length = 0;
     this.links = [];
+
+    this.currentItemsZIndex = 0;
   }
 
   public addLink(itemFrom: NaiscItemDescriptor,
