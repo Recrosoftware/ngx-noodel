@@ -7,6 +7,7 @@ import {TestContentComponent} from './test-content.component';
   selector: 'naisc-showcase',
   template: `
     <div naisc [templates]="templates"
+         (itemRemoved)="onRemove($event)"
          (clickLeft)="logMouse($event, 'left')"
          (clickRight)="logMouse($event, 'right')"></div>
 
@@ -120,6 +121,10 @@ export class AppComponent {
 
   public logMouse(evt: NaiscMouseEvent, action: string) {
     console.log(action, evt.localPosition.x, evt.localPosition.y);
+  }
+
+  public onRemove(desc: NaiscItemDescriptor): void {
+    console.log(desc);
   }
 
   public animate(): void {

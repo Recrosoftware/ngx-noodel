@@ -114,13 +114,16 @@ export class Naisc implements OnInit, AfterViewInit, OnChanges, OnDestroy {
 
   @Input() public clickMoveTolerance: number;
 
-  @Output() public clickLeft: EventEmitter<NaiscMouseEvent>;
-  @Output() public clickRight: EventEmitter<NaiscMouseEvent>;
+  @Output() public clickLeft = new EventEmitter<NaiscMouseEvent>();
+  @Output() public clickRight = new EventEmitter<NaiscMouseEvent>();
+
+  @Output() public itemAdded = new EventEmitter<NaiscItemDescriptor>();
+  @Output() public itemRemoved = new EventEmitter<NaiscItemDescriptor>();
 
   public linkingRef: NaiscItemLinkRef & { target: ViewProjection };
   public links: NaiscItemLink[] = [];
 
-  private currentItemsZIndex: number;
+  private currentItemsZIndex = 0;
 
   private dragging: boolean;
 
@@ -142,30 +145,19 @@ export class Naisc implements OnInit, AfterViewInit, OnChanges, OnDestroy {
   private readonly onClickL: Observable<MouseEvent>;
   private readonly onClickR: Observable<MouseEvent>;
 
-  private readonly linkEvents: Subject<NaiscLinkEvent>;
+  private readonly linkEvents = new Subject<NaiscLinkEvent>();
 
-  private readonly projectionTarget: ViewProjection;
-  private readonly projectionCurrent: ViewProjection;
+  private readonly projectionTarget: ViewProjection = {x: 0, y: 0, z: 1};
+  private readonly projectionCurrent: ViewProjection = {x: 0, y: 0, z: 1};
 
-  private readonly items: NaiscItemInstanceRef[];
+  private readonly items: NaiscItemInstanceRef[] = [];
   private readonly itemFactory: ComponentFactory<NaiscItemComponent>;
 
   constructor(private el: ElementRef,
               private zone: NgZone,
               private changeDetector: ChangeDetectorRef,
               private resolver: ComponentFactoryResolver) {
-    this.items = [];
     this.itemFactory = this.resolver.resolveComponentFactory(NaiscItemComponent);
-
-    this.projectionTarget = {x: 0, y: 0, z: 1};
-    this.projectionCurrent = {x: 0, y: 0, z: 1};
-
-    this.currentItemsZIndex = 0;
-
-    this.clickLeft = new EventEmitter();
-    this.clickRight = new EventEmitter();
-
-    this.linkEvents = new Subject();
 
     this.snap = DEFAULT_SNAP;
     this.minZoom = DEFAULT_MIN_ZOOM;
@@ -450,6 +442,8 @@ export class Naisc implements OnInit, AfterViewInit, OnChanges, OnDestroy {
       ref: itemRef,
       data: item
     });
+
+    this.itemAdded.emit(item);
   }
 
   public remove(item: NaiscItemDescriptor): void {
@@ -466,6 +460,8 @@ export class Naisc implements OnInit, AfterViewInit, OnChanges, OnDestroy {
     itemRef.destroy();
 
     this.items.splice(itemIdx, 1);
+
+    this.itemRemoved.emit(item);
   }
 
   public clear(): void {
