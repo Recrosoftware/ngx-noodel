@@ -5,6 +5,14 @@ import {NaiscItemDescriptor, NaiscPinDescriptor} from '../shared/naisc-item-desc
 import {NAISC_METADATA_ACCESSOR} from './symbols';
 
 
+export type NaiscHistoryAction = 'state' | 'move' | 'add' | 'remove';
+
+export interface NaiscHistoryEntry {
+  action: NaiscHistoryAction;
+  live: NaiscItemDescriptor;
+  snapshot: NaiscItemDescriptor;
+}
+
 export interface NaiscItemInstanceRef {
   ref: ComponentRef<NaiscItemComponent>;
   data: NaiscItemDescriptor;

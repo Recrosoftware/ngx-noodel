@@ -15,6 +15,8 @@ import {TestContentComponent} from './test-content.component';
     <button (click)="addNew()">ADD_NEW</button>
     <button (click)="clear()">CLEAR</button>
     <button (click)="animate()">ANIMATE</button>
+    <button (click)="undo()">UNDO</button>
+    <button (click)="redo()">REDO</button>
     <button (click)="fit()">FIT</button>
     <button (click)="setCenter()">GOTO 100 100</button>
     <button (click)="setZoom()">ZOOM 3</button>
@@ -93,6 +95,14 @@ export class AppComponent {
 
   public dumpImport(): void {
     this.naisc.import(JSON.parse(this.dump));
+  }
+
+  public undo(): void {
+    console.log('undo', this.naisc.undo());
+  }
+
+  public redo(): void {
+    console.log('redo', this.naisc.redo());
   }
 
   public addNew(): void {

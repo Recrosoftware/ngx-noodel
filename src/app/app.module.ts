@@ -1,4 +1,5 @@
 import {NgModule} from '@angular/core';
+import {ReactiveFormsModule} from '@angular/forms';
 import {BrowserModule} from '@angular/platform-browser';
 
 import {NaiscModule} from '@naisc/core';
@@ -18,6 +19,8 @@ import {TestContentComponent} from './test-content.component';
   ],
   imports: [
     BrowserModule,
+    ReactiveFormsModule,
+
     NaiscModule
   ],
   providers: [],

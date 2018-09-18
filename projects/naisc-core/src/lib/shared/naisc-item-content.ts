@@ -11,6 +11,8 @@ export abstract class NaiscItemContent {
   @Input() public item: NaiscItemDescriptor;
   @Input() public overlay: HTMLElement;
 
+  @Input() public registerHistory: () => void;
+
   public abstract getTitle(): string | Promise<string> | Observable<string>;
 
   public getInputPinName(idx: number): string | Promise<string> | Observable<string> {
@@ -27,5 +29,8 @@ export abstract class NaiscItemContent {
 
   public onValidate(): NaiscValidationError {
     return null;
+  }
+
+  public onHistoryChanged(): void {
   }
 }

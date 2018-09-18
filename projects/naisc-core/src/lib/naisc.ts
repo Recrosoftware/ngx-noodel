@@ -4,6 +4,7 @@ import {
   Component,
   ComponentFactory,
   ComponentFactoryResolver,
+  ComponentRef,
   ElementRef,
   EventEmitter,
   HostListener,
@@ -31,6 +32,8 @@ import {
   validateNaiscContent
 } from './internal/functions';
 import {
+  NaiscHistoryAction,
+  NaiscHistoryEntry,
   NaiscItemInstanceRef,
   NaiscItemLink,
   NaiscItemLinkRef,
@@ -51,6 +54,8 @@ import {NaiscValidationResult} from './shared/naisc-validation';
 
 
 const DEFAULT_CLICK_MOVE_TOLERANCE = 5;
+
+const DEFAULT_HISTORY_SIZE = 100;
 
 const DEFAULT_SNAP = true;
 const DEFAULT_ANIMATION_DURATION = 300;
@@ -107,6 +112,8 @@ export class Naisc implements OnInit, AfterViewInit, OnChanges, OnDestroy {
   @Input() public minZoom: number;
   @Input() public maxZoom: number;
 
+  @Input() public maxHistorySize: number;
+
   @Input() public templates: Type<NaiscItemContent>[];
   @Input() public animationDuration: number;
   @Input() public animationFunction: (start: number, end: number, t: number) => number;
@@ -114,13 +121,13 @@ export class Naisc implements OnInit, AfterViewInit, OnChanges, OnDestroy {
 
   @Input() public clickMoveTolerance: number;
 
-  @Output() public clickLeft: EventEmitter<NaiscMouseEvent>;
-  @Output() public clickRight: EventEmitter<NaiscMouseEvent>;
+  @Output() public clickLeft = new EventEmitter<NaiscMouseEvent>();
+  @Output() public clickRight = new EventEmitter<NaiscMouseEvent>();
 
   public linkingRef: NaiscItemLinkRef & { target: ViewProjection };
   public links: NaiscItemLink[] = [];
 
-  private currentItemsZIndex: number;
+  private currentItemsZIndex = 0;
 
   private dragging: boolean;
 
@@ -134,6 +141,9 @@ export class Naisc implements OnInit, AfterViewInit, OnChanges, OnDestroy {
   private lClickSubscription = Subscription.EMPTY;
   private rClickSubscription = Subscription.EMPTY;
 
+  private readonly redoHistory: NaiscHistoryEntry[] = [];
+  private readonly undoHistory: NaiscHistoryEntry[] = [];
+
   private readonly onDrag: Observable<MouseEvent>;
   private readonly onMove: Observable<MouseEvent>;
   private readonly onZoom: Observable<WheelEvent>;
@@ -142,31 +152,21 @@ export class Naisc implements OnInit, AfterViewInit, OnChanges, OnDestroy {
   private readonly onClickL: Observable<MouseEvent>;
   private readonly onClickR: Observable<MouseEvent>;
 
-  private readonly linkEvents: Subject<NaiscLinkEvent>;
+  private readonly linkEvents = new Subject<NaiscLinkEvent>();
 
-  private readonly projectionTarget: ViewProjection;
-  private readonly projectionCurrent: ViewProjection;
+  private readonly projectionTarget: ViewProjection = {x: 0, y: 0, z: 1};
+  private readonly projectionCurrent: ViewProjection = {x: 0, y: 0, z: 1};
 
-  private readonly items: NaiscItemInstanceRef[];
+  private readonly items: NaiscItemInstanceRef[] = [];
   private readonly itemFactory: ComponentFactory<NaiscItemComponent>;
 
   constructor(private el: ElementRef,
               private zone: NgZone,
               private changeDetector: ChangeDetectorRef,
               private resolver: ComponentFactoryResolver) {
-    this.items = [];
     this.itemFactory = this.resolver.resolveComponentFactory(NaiscItemComponent);
 
-    this.projectionTarget = {x: 0, y: 0, z: 1};
-    this.projectionCurrent = {x: 0, y: 0, z: 1};
-
-    this.currentItemsZIndex = 0;
-
-    this.clickLeft = new EventEmitter();
-    this.clickRight = new EventEmitter();
-
-    this.linkEvents = new Subject();
-
+    this.maxHistorySize = DEFAULT_HISTORY_SIZE;
     this.snap = DEFAULT_SNAP;
     this.minZoom = DEFAULT_MIN_ZOOM;
     this.maxZoom = DEFAULT_MAX_ZOOM;
@@ -420,52 +420,13 @@ export class Naisc implements OnInit, AfterViewInit, OnChanges, OnDestroy {
   }
 
   public add(item: NaiscItemDescriptor): void {
-    if (this.items.some(i => i.data === item)) {
-      return;
-    }
-
-    const itemRef = this.containerRef.createComponent(this.itemFactory);
-    const instance = itemRef.instance;
-
-    instance.item = item;
-    instance.overlayRef = this.getOverlayElement();
-    instance.currentZIndex = ++this.currentItemsZIndex;
-
-    instance.generateZIndex = (z) => z < this.currentItemsZIndex ? ++this.currentItemsZIndex : z;
-    instance.removeFn = () => this.remove(item);
-
-    instance.onLink = (a, p) => this.onLink(a, item, p);
-    instance.linkEvents = this.linkEvents;
-    instance.onMove = this.onMove;
-    instance.onActionEnd = this.onActionEnd;
-    instance.parentProjection = this.projectionCurrent;
-
-    instance.snap = this.snap;
-    instance.templates = this.templates;
-    instance.animationDuration = this.animationDuration;
-    instance.animationFunction = this.animationFunction;
-    instance.removeItemIconClass = this.removeItemIconClass;
-
-    this.items.push({
-      ref: itemRef,
-      data: item
-    });
+    this.addInternal(item);
+    this.pushHistoryState('add', item);
   }
 
   public remove(item: NaiscItemDescriptor): void {
-    const itemIdx = this.items.findIndex(i => i.data === item);
-
-    if (itemIdx < 0) {
-      return;
-    }
-
-    item.pins.in.forEach(p => this.removeLink(p));
-    item.pins.out.forEach(p => this.removeLink(p));
-
-    const itemRef = this.items[itemIdx].ref;
-    itemRef.destroy();
-
-    this.items.splice(itemIdx, 1);
+    this.removeInternal(item);
+    this.pushHistoryState('remove', item);
   }
 
   public clear(): void {
@@ -517,6 +478,164 @@ export class Naisc implements OnInit, AfterViewInit, OnChanges, OnDestroy {
       refTo: link.to
     });
     this.links = [...this.links, link];
+  }
+
+  public undo(): any /*TODO*/ {
+    if (this.undoHistory.length === 0) {
+      return null;
+    }
+
+    let snapshot: NaiscItemDescriptor;
+    const item = this.undoHistory.splice(0, 1)[0];
+
+    switch (item.action) {
+      case 'move':
+      case 'state':
+        const container = this.items.find(i => i.data === item.live);
+
+        if (!container) {
+          return;
+        }
+
+        const instance = container.ref.instance;
+        container.data = instance.item = item.snapshot;
+        instance.triggerHistoryChange();
+
+        snapshot = deepCopy(item.live);
+        break;
+      case 'remove':
+        this.addInternal(item.snapshot);
+        snapshot = deepCopy(item.live);
+        break;
+      case 'add':
+        this.removeInternal(item.live);
+        snapshot = deepCopy(item.live);
+        break;
+    }
+
+    this.redoHistory.splice(0, 0, {
+      action: item.action,
+      live: item.snapshot,
+      snapshot: snapshot
+    });
+    if (this.redoHistory.length > this.maxHistorySize) {
+      this.redoHistory.length = this.maxHistorySize;
+    }
+
+    this.undoHistory.forEach(h => {
+      if (h.live === item.live) {
+        h.live = item.snapshot;
+      }
+    });
+    this.redoHistory.forEach(h => {
+      if (h.live === item.live) {
+        h.live = item.snapshot;
+      }
+    });
+  }
+
+  public redo(): any /*TODO*/ {
+    if (this.redoHistory.length === 0) {
+      return null;
+    }
+
+    let snapshot: NaiscItemDescriptor;
+    const item = this.redoHistory.splice(0, 1)[0];
+
+    switch (item.action) {
+      case 'move':
+      case 'state':
+        const container = this.items.find(i => i.data === item.live);
+
+        if (!container) {
+          return;
+        }
+
+        const instance = container.ref.instance;
+        container.data = instance.item = item.snapshot;
+        instance.triggerHistoryChange();
+
+        snapshot = deepCopy(item.live);
+        break;
+      case 'remove':
+        this.removeInternal(item.live);
+        snapshot = deepCopy(item.live);
+        break;
+      case 'add':
+        this.addInternal(item.snapshot);
+        snapshot = deepCopy(item.live);
+    }
+    this.undoHistory.splice(0, 0, {
+      action: item.action,
+      live: item.snapshot,
+      snapshot: snapshot
+    });
+    if (this.undoHistory.length > this.maxHistorySize) {
+      this.undoHistory.length = this.maxHistorySize;
+    }
+
+    this.undoHistory.forEach(h => {
+      if (h.live === item.live) {
+        h.live = item.snapshot;
+      }
+    });
+    this.redoHistory.forEach(h => {
+      if (h.live === item.live) {
+        h.live = item.snapshot;
+      }
+    });
+  }
+
+  private addInternal(item: NaiscItemDescriptor): ComponentRef<NaiscItemComponent> {
+    if (this.items.some(i => i.data === item)) {
+      return;
+    }
+
+    const itemRef = this.containerRef.createComponent(this.itemFactory);
+    const instance = itemRef.instance;
+
+    instance.item = item;
+    instance.overlayRef = this.getOverlayElement();
+    instance.currentZIndex = ++this.currentItemsZIndex;
+
+    instance.registerHistory = action => this.pushHistoryState(action, item);
+    instance.generateZIndex = (z) => z < this.currentItemsZIndex ? ++this.currentItemsZIndex : z;
+    instance.removeFn = () => this.remove(item);
+
+    instance.onLink = (a, p) => this.onLink(a, item, p);
+    instance.linkEvents = this.linkEvents;
+    instance.onMove = this.onMove;
+    instance.onActionEnd = this.onActionEnd;
+    instance.parentProjection = this.projectionCurrent;
+
+    instance.snap = this.snap;
+    instance.templates = this.templates;
+    instance.animationDuration = this.animationDuration;
+    instance.animationFunction = this.animationFunction;
+    instance.removeItemIconClass = this.removeItemIconClass;
+
+    this.items.push({
+      ref: itemRef,
+      data: item
+    });
+
+    return itemRef;
+  }
+
+  private removeInternal(item: NaiscItemDescriptor): void {
+    const itemIdx = this.items.findIndex(i => i.data === item);
+
+    if (itemIdx < 0) {
+      return;
+    }
+
+    item.pins.in.forEach(p => this.removeLink(p));
+    item.pins.out.forEach(p => this.removeLink(p));
+
+    const itemRef = this.items[itemIdx].ref;
+    itemRef.destroy();
+
+    this.items.splice(itemIdx, 1);
   }
 
   private onLink(action: 'start' | 'end' | 'remove', item: NaiscItemDescriptor, pin: NaiscPinDescriptor): void {
@@ -596,6 +715,23 @@ export class Naisc implements OnInit, AfterViewInit, OnChanges, OnDestroy {
     });
 
     this.links.slice();
+  }
+
+  private pushHistoryState(action: NaiscHistoryAction, item: NaiscItemDescriptor): void {
+    const snapshot = deepCopy(item);
+
+    this.redoHistory.length = 0;
+    this.undoHistory.splice(0, 0, {
+      action: action,
+      live: item,
+      snapshot: snapshot
+    });
+
+    if (this.undoHistory.length > this.maxHistorySize) {
+      this.undoHistory.length = this.maxHistorySize;
+    }
+
+    console.log(this.undoHistory[0]);
   }
 
   // endregion

@@ -88,6 +88,7 @@ export class NaiscItemComponent implements AfterViewInit, OnDestroy {
   public overlayRef: HTMLElement;
   public currentZIndex: number;
 
+  public registerHistory: (action: 'move' | 'state') => void;
   public generateZIndex: (zindex: number) => number;
   public removeFn: () => void;
 
@@ -165,6 +166,14 @@ export class NaiscItemComponent implements AfterViewInit, OnDestroy {
     return this.contentRef ? this.contentRef.instance.onValidate() : null;
   }
 
+  public triggerHistoryChange(): void {
+    if (this.contentRef) {
+      this.contentRef.instance.onHistoryChanged();
+    }
+
+    this.render(true, true);
+  }
+
   public updateContentTemplate(): void {
     if (!this.itemContentContainer) {
       return;
@@ -191,6 +200,7 @@ export class NaiscItemComponent implements AfterViewInit, OnDestroy {
 
     this.contentRef.instance.item = this.item;
     this.contentRef.instance.overlay = this.overlayRef;
+    this.contentRef.instance.registerHistory = () => this.registerHistory('state');
 
     runAsyncTask(() => this.render(false, true, true));
   }
@@ -298,6 +308,7 @@ export class NaiscItemComponent implements AfterViewInit, OnDestroy {
     const cDrag = cDown.pipe(
       tap(() => this.updateZIndex()),
       filter(down => down.button === 0), // Left Click
+      tap(() => this.registerHistory('move')),
       switchMap(down => this.onMove.pipe(
         tap(() => this.dragging = true),
         startWith(down),
