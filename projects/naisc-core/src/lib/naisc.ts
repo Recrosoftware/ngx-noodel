@@ -60,6 +60,7 @@ const DEFAULT_MAX_ZOOM = 5;
 const DEFAULT_CLOSE_ICON = 'fa fa-fw fa-window-close';
 
 const BACKGROUND_SIZE = 100;
+const DEFAULT_STATE_CHANGE_DEBOUNCE = 50;
 
 function transformLinear(start: number, end: number, t: number): number {
   return start * (1 - t) + end * t;
@@ -114,6 +115,9 @@ export class Naisc implements OnInit, AfterViewInit, OnChanges, OnDestroy {
 
   @Input() public clickMoveTolerance: number;
 
+  @Input() public stateChangedDebounce: boolean;
+  @Input() public stateChangedDebounceTime: number;
+
   @Output() public clickLeft = new EventEmitter<NaiscMouseEvent>();
   @Output() public clickRight = new EventEmitter<NaiscMouseEvent>();
 
@@ -141,6 +145,8 @@ export class Naisc implements OnInit, AfterViewInit, OnChanges, OnDestroy {
 
   private removing = false;
   private importing = false;
+
+  private changeDebounce: any;
 
   private readonly onDrag: Observable<MouseEvent>;
   private readonly onMove: Observable<MouseEvent>;
@@ -171,6 +177,9 @@ export class Naisc implements OnInit, AfterViewInit, OnChanges, OnDestroy {
     this.animationFunction = transformLinear;
     this.removeItemIconClass = DEFAULT_CLOSE_ICON;
     this.clickMoveTolerance = DEFAULT_CLICK_MOVE_TOLERANCE;
+
+    this.stateChangedDebounce = false;
+    this.stateChangedDebounceTime = DEFAULT_STATE_CHANGE_DEBOUNCE;
 
     const dUp = fromEvent<MouseEvent>(document, 'mouseup');
     const dBlur = fromEvent<Event>(document, 'blur');
@@ -388,7 +397,7 @@ export class Naisc implements OnInit, AfterViewInit, OnChanges, OnDestroy {
     });
 
     this.importing = false;
-    this.stateChanged.emit();
+    this.emitStateChanged();
   }
 
   public validate(): NaiscValidationResult[] {
@@ -433,7 +442,7 @@ export class Naisc implements OnInit, AfterViewInit, OnChanges, OnDestroy {
     instance.overlayRef = this.getOverlayElement();
     instance.currentZIndex = ++this.currentItemsZIndex;
 
-    instance.fireStateChange = () => this.stateChanged.emit();
+    instance.fireStateChange = () => this.emitStateChanged();
     instance.generateZIndex = (z) => z < this.currentItemsZIndex ? ++this.currentItemsZIndex : z;
     instance.removeFn = () => this.remove(item);
 
@@ -455,9 +464,7 @@ export class Naisc implements OnInit, AfterViewInit, OnChanges, OnDestroy {
     });
 
     this.itemAdded.emit(item);
-    if (!this.importing) {
-      this.stateChanged.emit();
-    }
+    this.emitStateChanged();
   }
 
   public remove(item: NaiscItemDescriptor): void {
@@ -478,7 +485,7 @@ export class Naisc implements OnInit, AfterViewInit, OnChanges, OnDestroy {
     this.items.splice(itemIdx, 1);
 
     this.itemRemoved.emit(item);
-    this.stateChanged.emit();
+    this.emitStateChanged();
   }
 
   public clear(): void {
@@ -487,9 +494,7 @@ export class Naisc implements OnInit, AfterViewInit, OnChanges, OnDestroy {
     this.links = [];
 
     this.currentItemsZIndex = 0;
-    if (!this.importing) {
-      this.stateChanged.emit();
-    }
+    this.emitStateChanged();
   }
 
   public addLink(itemFrom: NaiscItemDescriptor,
@@ -534,9 +539,7 @@ export class Naisc implements OnInit, AfterViewInit, OnChanges, OnDestroy {
     });
     this.links = [...this.links, link];
 
-    if (!this.importing) {
-      this.stateChanged.emit();
-    }
+    this.emitStateChanged();
   }
 
   private onLink(action: 'start' | 'end' | 'remove', item: NaiscItemDescriptor, pin: NaiscPinDescriptor): void {
@@ -616,7 +619,18 @@ export class Naisc implements OnInit, AfterViewInit, OnChanges, OnDestroy {
     });
 
     this.links.slice();
-    if (!this.removing) {
+    this.emitStateChanged();
+  }
+
+  private emitStateChanged(): void {
+    if (this.removing || this.importing) {
+      return;
+    }
+
+    if (this.stateChangedDebounce) {
+      clearTimeout(this.changeDebounce);
+      this.changeDebounce = setTimeout(() => this.stateChanged.emit(), this.stateChangedDebounceTime);
+    } else {
       this.stateChanged.emit();
     }
   }
