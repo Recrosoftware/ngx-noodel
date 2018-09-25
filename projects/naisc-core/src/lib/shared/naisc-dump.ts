@@ -3,7 +3,7 @@ import {NaiscItemDescriptor} from './naisc-item-descriptor';
 
 export interface NaiscDump {
   items: NaiscItemDescriptor[];
-  links: NaiscLinkDump[][];
+  links: NaiscLinkDump[][][];
 }
 
 export interface NaiscLinkDump {

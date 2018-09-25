@@ -23,13 +23,7 @@ import {
 import {fromEvent, merge, Observable, Subject, Subscription} from 'rxjs';
 import {filter, share, startWith, switchMap, take, takeUntil, tap} from 'rxjs/operators';
 
-import {
-  cancelAsyncMicrotask,
-  deepCopy,
-  runAsyncMicrotask,
-  runAsyncTask,
-  validateNaiscContent
-} from './internal/functions';
+import {cancelAsyncMicrotask, deepCopy, runAsyncMicrotask, validateNaiscContent} from './internal/functions';
 import {
   NaiscItemInstanceRef,
   NaiscItemLink,
@@ -60,7 +54,6 @@ const DEFAULT_MAX_ZOOM = 5;
 const DEFAULT_CLOSE_ICON = 'fa fa-fw fa-window-close';
 
 const BACKGROUND_SIZE = 100;
-const DEFAULT_STATE_CHANGE_DEBOUNCE = 50;
 
 function transformLinear(start: number, end: number, t: number): number {
   return start * (1 - t) + end * t;
@@ -146,8 +139,6 @@ export class Naisc implements OnInit, AfterViewInit, OnChanges, OnDestroy {
   private removing = false;
   private importing = false;
 
-  private changeDebounce: any;
-
   private readonly onDrag: Observable<MouseEvent>;
   private readonly onMove: Observable<MouseEvent>;
   private readonly onZoom: Observable<WheelEvent>;
@@ -177,9 +168,6 @@ export class Naisc implements OnInit, AfterViewInit, OnChanges, OnDestroy {
     this.animationFunction = transformLinear;
     this.removeItemIconClass = DEFAULT_CLOSE_ICON;
     this.clickMoveTolerance = DEFAULT_CLICK_MOVE_TOLERANCE;
-
-    this.stateChangedDebounce = false;
-    this.stateChangedDebounceTime = DEFAULT_STATE_CHANGE_DEBOUNCE;
 
     const dUp = fromEvent<MouseEvent>(document, 'mouseup');
     const dBlur = fromEvent<Event>(document, 'blur');
@@ -361,24 +349,23 @@ export class Naisc implements OnInit, AfterViewInit, OnChanges, OnDestroy {
 
     return {
       items: deepCopy(items),
-      links: items.map(i => i.pins.out.map(pin => {
-        const link = this.links.find(l => l.from.pin === pin);
-        if (!link) {
-          return null;
-        }
+      links: items.map(i => i.pins.out.map(pin => this.links
+        .map(link => {
+          try {
+            if (link.from.pin === pin) {
+              const pinIdx = link.to.item.pins.in.indexOf(link.to.pin);
+              const itemIdx = items.indexOf(link.to.item);
 
-        try {
-          const pinIdx = link.to.item.pins.in.indexOf(link.to.pin);
-          const itemIdx = items.indexOf(link.to.item);
-
-          if (pinIdx >= 0 || itemIdx >= 0) {
-            return {pinIdx, itemIdx};
+              if (pinIdx >= 0 && itemIdx >= 0) {
+                return {pinIdx, itemIdx};
+              }
+            }
+          } catch (e) {
           }
-        } catch (e) {
-        }
 
-        return null;
-      }))
+          return null;
+        })
+        .filter(l => !!l)))
     };
   }
 
@@ -388,13 +375,11 @@ export class Naisc implements OnInit, AfterViewInit, OnChanges, OnDestroy {
     this.clear();
 
     dump.items.forEach(d => this.add(d));
-    runAsyncTask(() => {
-      dump.links.forEach((iL, iI) => iL.forEach((pL, pI) => {
-        if (pL != null) {
-          this.addLink(dump.items[iI], pI, dump.items[pL.itemIdx], pL.pinIdx);
-        }
-      }));
-    });
+    dump.links.forEach((iL, iI) => iL.forEach((pLs, pI) => pLs.forEach(pL => {
+      if (pL != null) {
+        this.addLink(dump.items[iI], pI, dump.items[pL.itemIdx], pL.pinIdx);
+      }
+    })));
 
     this.importing = false;
     this.emitStateChanged();
@@ -627,12 +612,7 @@ export class Naisc implements OnInit, AfterViewInit, OnChanges, OnDestroy {
       return;
     }
 
-    if (this.stateChangedDebounce) {
-      clearTimeout(this.changeDebounce);
-      this.changeDebounce = setTimeout(() => this.stateChanged.emit(), this.stateChangedDebounceTime);
-    } else {
-      this.stateChanged.emit();
-    }
+    this.stateChanged.emit();
   }
 
   // endregion
