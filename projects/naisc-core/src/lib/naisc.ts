@@ -385,6 +385,19 @@ export class Naisc implements OnInit, AfterViewInit, OnChanges, OnDestroy {
     this.emitStateChanged();
   }
 
+  public getItems(): NaiscItemDescriptor[] {
+    return this.items.map(r => r.data);
+  }
+
+  public getItemExtent(item: NaiscItemDescriptor): NaiscExtent | null {
+    const ref = this.items.find(r => r.data === item);
+    if (!ref) {
+      return null;
+    }
+
+    return ref.ref.instance.getItemExtent();
+  }
+
   public validate(): NaiscValidationResult[] {
     return this.items
       .map(itemRef => ({
