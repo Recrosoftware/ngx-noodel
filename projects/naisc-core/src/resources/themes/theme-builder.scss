@@ -57,33 +57,36 @@ $naisc-pin-highlight-hover-border: $naisc-pin-highlight-border;
     .naisc-item-pin {
       background-color: $naisc-pin-color;
       border: 1px solid $naisc-pin-border;
-      &:hover {
-        background-color: $naisc-pin-hover-color;
-        border: 1px solid $naisc-pin-hover-border;
-      }
 
-      &.active {
-        background-color: $naisc-pin-active-color;
-        border: 1px solid $naisc-pin-active-border;
+      &:not(.readonly) {
         &:hover {
-          background-color: $naisc-pin-active-hover-color;
-          border: 1px solid $naisc-pin-active-hover-border;
+          background-color: $naisc-pin-hover-color;
+          border: 1px solid $naisc-pin-hover-border;
         }
-      }
-      &.invalid {
-        background-color: $naisc-pin-invalid-color;
-        border: 1px solid $naisc-pin-invalid-border;
-        &:hover {
-          background-color: $naisc-pin-invalid-hover-color;
-          border: 1px solid $naisc-pin-invalid-hover-border;
+
+        &.active {
+          background-color: $naisc-pin-active-color;
+          border: 1px solid $naisc-pin-active-border;
+          &:hover {
+            background-color: $naisc-pin-active-hover-color;
+            border: 1px solid $naisc-pin-active-hover-border;
+          }
         }
-      }
-      &.highlight {
-        background-color: $naisc-pin-highlight-color;
-        border: 1px solid $naisc-pin-highlight-border;
-        &:hover {
-          background-color: $naisc-pin-highlight-hover-color;
-          border: 1px solid $naisc-pin-highlight-hover-border;
+        &.invalid {
+          background-color: $naisc-pin-invalid-color;
+          border: 1px solid $naisc-pin-invalid-border;
+          &:hover {
+            background-color: $naisc-pin-invalid-hover-color;
+            border: 1px solid $naisc-pin-invalid-hover-border;
+          }
+        }
+        &.highlight {
+          background-color: $naisc-pin-highlight-color;
+          border: 1px solid $naisc-pin-highlight-border;
+          &:hover {
+            background-color: $naisc-pin-highlight-hover-color;
+            border: 1px solid $naisc-pin-highlight-hover-border;
+          }
         }
       }
     }

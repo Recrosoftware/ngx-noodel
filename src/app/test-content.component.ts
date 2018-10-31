@@ -7,6 +7,7 @@ import {NaiscItem, NaiscItemContent} from '@naisc/core';
     <div #testRef>test</div>
 
     Hello World
+    <input [readonly]="readonly" [value]="viewState['state-key']"/>
   `
 })
 @NaiscItem('test', {
@@ -24,6 +25,9 @@ export class TestContentComponent extends NaiscItemContent implements AfterViewI
 
   public ngAfterViewInit(): void {
     // this.overlay.appendChild(this.testRef.nativeElement);
+    this.viewState$.subscribe(evt => {
+      console.log('State changed:', evt);
+    });
   }
 
   public getTitle(): string {

@@ -23,6 +23,7 @@ import {NaiscItemDescriptor, NaiscPinDescriptor} from './shared/naisc-item-descr
     'class': 'naisc-item-pin',
     '[class.multi]': 'pin.multiple',
     '[class.active]': 'active',
+    '[class.readonly]': 'readonly',
     '[class.invalid]': 'invalid',
     '[class.highlight]': 'highlight'
   }
@@ -35,6 +36,7 @@ export class NaiscItemPinDirective implements OnInit, AfterViewInit, OnDestroy {
 
   @Input() public item: NaiscItemDescriptor;
   @Input() public type: 'in' | 'out';
+  @Input() public readonly: boolean;
 
   @Input() public linkEvents: Observable<NaiscLinkEvent>;
 
@@ -88,6 +90,10 @@ export class NaiscItemPinDirective implements OnInit, AfterViewInit, OnDestroy {
 
   @HostListener('mousedown', ['$event'])
   public onMouseDown(evt: MouseEvent): void {
+    if (this.readonly) {
+      return;
+    }
+
     evt.preventDefault();
     evt.stopPropagation();
 
@@ -109,7 +115,7 @@ export class NaiscItemPinDirective implements OnInit, AfterViewInit, OnDestroy {
 
   @HostListener('click', ['$event'])
   public onClick(evt: MouseEvent): void {
-    if (!this.active) {
+    if (!this.active || this.readonly) {
       return;
     }
 

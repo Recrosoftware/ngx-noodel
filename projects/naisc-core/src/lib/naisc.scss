@@ -152,12 +152,14 @@
             -webkit-border-radius: 20%;
           }
 
-          &.active {
-            cursor: pointer;
-          }
+          &:not(.readonly) {
+            &.active {
+              cursor: pointer;
+            }
 
-          &.invalid {
-            cursor: not-allowed;
+            &.invalid {
+              cursor: not-allowed;
+            }
           }
         }
       }

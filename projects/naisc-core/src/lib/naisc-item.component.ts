@@ -36,7 +36,8 @@ import {NaiscValidationError} from './shared/naisc-validation';
   template: `
     <div class="naisc-item-track-bar" #titleBar>
       {{getTitle() | rsAsync}}
-      <i *ngIf="!(isPermanent() | rsAsync:true)" class="naisc-item-close-btn {{removeItemIconClass}}"
+      <i *ngIf="!(isPermanent() | rsAsync:true) && !readonly"
+         class="naisc-item-close-btn {{removeItemIconClass}}"
          (click)="onRemoveClick($event)" (mousedown)="$event.stopPropagation()"></i>
     </div>
 
@@ -45,6 +46,7 @@ import {NaiscValidationError} from './shared/naisc-validation';
         <li *ngFor="let pin of item.pins.in; let idx = index">
           <span>{{getInputPinName(idx) | rsAsync}}</span>
           <div [naiscItemPin]="pin" [item]="item" [type]="'in'"
+               [readonly]="readonly"
                [linkEvents]="linkEvents"
                (linkEnd)="onLinkInternal('end', pin)"
                (linkStart)="onLinkInternal('start', pin)"
@@ -56,6 +58,7 @@ import {NaiscValidationError} from './shared/naisc-validation';
         <li *ngFor="let pin of item.pins.out; let idx = index">
           <span>{{getOutputPinName(idx) | rsAsync}}</span>
           <div [naiscItemPin]="pin" [item]="item" [type]="'out'"
+               [readonly]="readonly"
                [linkEvents]="linkEvents"
                (linkEnd)="onLinkInternal('end', pin)"
                (linkStart)="onLinkInternal('start', pin)"
@@ -84,7 +87,23 @@ export class NaiscItemComponent implements AfterViewInit, OnDestroy {
 
   @ViewChildren(NaiscItemPinDirective) public pinRefs: QueryList<NaiscItemPinDirective>;
 
+  public get readonly(): boolean {
+    return this._readonly;
+  }
+
+  public set readonly(ro: boolean) {
+    this._readonly = ro;
+
+    if (this.contentRef) {
+      this.contentRef.instance.readonly = ro;
+      this.contentRef.instance.onReadonlyChanged(ro);
+    }
+  }
+
   public item: NaiscItemDescriptor;
+  public state: { [key: string]: any };
+  public state$: Observable<{ key: string, value: any }>;
+
   public overlayRef: HTMLElement;
   public currentZIndex: number;
 
@@ -114,6 +133,8 @@ export class NaiscItemComponent implements AfterViewInit, OnDestroy {
 
   private dragSubscription = Subscription.EMPTY;
 
+  private _readonly: boolean;
+
   constructor(private el: ElementRef,
               private zone: NgZone,
               private resolver: ComponentFactoryResolver) {
@@ -134,8 +155,11 @@ export class NaiscItemComponent implements AfterViewInit, OnDestroy {
 
   @HostListener('mousedown', ['$event'])
   public onMouseDown(evt: Event): void {
-    evt.stopPropagation();
+    if (this.readonly) {
+      return;
+    }
 
+    evt.stopPropagation();
     this.updateZIndex();
   }
 
@@ -192,7 +216,11 @@ export class NaiscItemComponent implements AfterViewInit, OnDestroy {
 
     this.contentRef.instance.item = this.item;
     this.contentRef.instance.overlay = this.overlayRef;
+    this.contentRef.instance.readonly = this.readonly;
     this.contentRef.instance.notifyChanges = this.fireStateChange;
+
+    this.contentRef.instance.viewState = this.state;
+    this.contentRef.instance.viewState$ = this.state$;
 
     runAsyncTask(() => this.render(false, true, true));
   }
@@ -296,7 +324,9 @@ export class NaiscItemComponent implements AfterViewInit, OnDestroy {
   }
 
   private listenDragEvents(): void {
-    const cDown = fromEvent<MouseEvent>(this.titleBarRef.nativeElement, 'mousedown');
+    const cDown = fromEvent<MouseEvent>(this.titleBarRef.nativeElement, 'mousedown').pipe(
+      filter(() => !this.readonly)
+    );
     const cDrag = cDown.pipe(
       tap(() => this.updateZIndex()),
       filter(down => down.button === 0), // Left Click

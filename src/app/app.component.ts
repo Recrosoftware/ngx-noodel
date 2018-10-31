@@ -6,7 +6,9 @@ import {TestContentComponent} from './test-content.component';
 @Component({
   selector: 'naisc-showcase',
   template: `
-    <div naisc [templates]="templates"
+    <div naisc
+         [readonly]="readonlyState"
+         [templates]="templates"
          (stateChanged)="onState()"
          (clickLeft)="logMouse($event, 'left')"
          (clickRight)="logMouse($event, 'right')"></div>
@@ -25,6 +27,10 @@ import {TestContentComponent} from './test-content.component';
     <button (click)="dumpImport()">IMPORT</button>
 
     <button (click)="addInstance()">ADD_INSTANCE</button>
+
+    <button (click)="readonlyState = !readonlyState">TOGGLE READONLY</button>
+
+    <button (click)="changeState()">CHANGE STATE</button>
   `,
   styles: [`
     div[naisc] {
@@ -42,6 +48,8 @@ export class AppComponent implements AfterViewInit {
   public state: NaiscDump;
   public undo: NaiscDump[] = [];
   public redo: NaiscDump[] = [];
+
+  public readonlyState = false;
 
   public templates = [
     TestContentComponent
@@ -188,5 +196,9 @@ export class AppComponent implements AfterViewInit {
 
       this.naisc.requestRender();
     }, 100);
+  }
+
+  public changeState(): void {
+    this.naisc.setState('state-key', Math.random());
   }
 }

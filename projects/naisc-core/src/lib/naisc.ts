@@ -20,8 +20,8 @@ import {
   ViewEncapsulation
 } from '@angular/core';
 
-import {fromEvent, merge, Observable, Subject, Subscription} from 'rxjs';
-import {filter, share, startWith, switchMap, take, takeUntil, tap} from 'rxjs/operators';
+import {BehaviorSubject, fromEvent, merge, Observable, Subject, Subscription} from 'rxjs';
+import {filter, map, share, startWith, switchMap, take, takeUntil, tap} from 'rxjs/operators';
 
 import {cancelAsyncMicrotask, deepCopy, runAsyncMicrotask, validateNaiscContent} from './internal/functions';
 import {
@@ -101,6 +101,8 @@ export class Naisc implements OnInit, AfterViewInit, OnChanges, OnDestroy {
   @Input() public minZoom: number;
   @Input() public maxZoom: number;
 
+  @Input() public readonly: boolean;
+
   @Input() public templates: Type<NaiscItemContent>[];
   @Input() public animationDuration: number;
   @Input() public animationFunction: (start: number, end: number, t: number) => number;
@@ -155,11 +157,26 @@ export class Naisc implements OnInit, AfterViewInit, OnChanges, OnDestroy {
   private readonly items: NaiscItemInstanceRef[] = [];
   private readonly itemFactory: ComponentFactory<NaiscItemComponent>;
 
+  private readonly state: { [key: string]: any };
+  private readonly state$: Observable<{ key: string, value: any }>;
+  private readonly stateSource$: Subject<string>;
+
   constructor(private el: ElementRef,
               private zone: NgZone,
               private changeDetector: ChangeDetectorRef,
               private resolver: ComponentFactoryResolver) {
     this.itemFactory = this.resolver.resolveComponentFactory(NaiscItemComponent);
+
+    this.readonly = false;
+
+    this.stateSource$ = new BehaviorSubject(null);
+    this.state = {};
+    this.state$ = this.stateSource$
+      .pipe(
+        filter(key => key != null),
+        map(key => ({key, value: this.getState(key)})),
+        share()
+      );
 
     this.snap = DEFAULT_SNAP;
     this.minZoom = DEFAULT_MIN_ZOOM;
@@ -306,6 +323,7 @@ export class Naisc implements OnInit, AfterViewInit, OnChanges, OnDestroy {
 
   public ngOnChanges(changes: SimpleChanges): void {
     [
+      'readonly',
       'animationDuration',
       'animationFunction',
       'removeItemIconClass'
@@ -437,6 +455,11 @@ export class Naisc implements OnInit, AfterViewInit, OnChanges, OnDestroy {
     const instance = itemRef.instance;
 
     instance.item = item;
+    instance.state = this.state;
+    instance.state$ = this.state$;
+
+    instance.readonly = this.readonly;
+
     instance.overlayRef = this.getOverlayElement();
     instance.currentZIndex = ++this.currentItemsZIndex;
 
@@ -493,6 +516,24 @@ export class Naisc implements OnInit, AfterViewInit, OnChanges, OnDestroy {
 
     this.currentItemsZIndex = 0;
     this.emitStateChanged();
+  }
+
+  public setState(key: string, value: any): void {
+    if (key != null) {
+      this.state[key] = value;
+      this.stateSource$.next(key);
+    }
+  }
+
+  public getState(key: string): any {
+    return this.state[key];
+  }
+
+  public removeState(key: string): void {
+    if (key != null) {
+      delete this.state[key];
+      this.stateSource$.next(key);
+    }
   }
 
   public addLink(itemFrom: NaiscItemDescriptor,

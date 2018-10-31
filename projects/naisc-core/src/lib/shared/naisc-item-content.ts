@@ -10,7 +10,11 @@ const DEFAULT_PIN_NAME = '---';
 export abstract class NaiscItemContent {
   @Input() public item: NaiscItemDescriptor;
   @Input() public overlay: HTMLElement;
+  @Input() public readonly: boolean;
   @Input() public notifyChanges: () => void;
+
+  @Input() public viewState: { [key: string]: any };
+  @Input() public viewState$: Observable<{ key: string, value: any }>;
 
   public abstract getTitle(): string | Promise<string> | Observable<string>;
 
@@ -24,6 +28,9 @@ export abstract class NaiscItemContent {
 
   public isPermanent(): boolean | Promise<boolean> | Observable<boolean> {
     return false;
+  }
+
+  public onReadonlyChanged(readonly: boolean): void {
   }
 
   public onValidate(): NaiscValidationError {
