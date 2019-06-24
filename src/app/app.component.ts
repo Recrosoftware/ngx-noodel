@@ -41,7 +41,7 @@ import {TestContentComponent} from './test-content.component';
   `]
 })
 export class AppComponent implements AfterViewInit {
-  @ViewChild(Naisc) public naisc: Naisc;
+  @ViewChild(Naisc, {static: false}) public naisc: Naisc;
 
   public undoing = false;
 

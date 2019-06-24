@@ -19,7 +19,7 @@ import {NaiscItem, NaiscItemContent} from '@naisc/core';
   ]
 })
 export class TestContentComponent extends NaiscItemContent implements AfterViewInit {
-  @ViewChild('testRef') public testRef: ElementRef;
+  @ViewChild('testRef', {static: true}) public testRef: ElementRef;
 
   private readonly title = 'My Node';
 

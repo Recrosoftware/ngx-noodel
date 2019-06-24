@@ -82,8 +82,11 @@ import {NaiscValidationError} from './shared/naisc-validation';
   encapsulation: ViewEncapsulation.None
 })
 export class NaiscItemComponent implements AfterViewInit, OnDestroy {
-  @ViewChild('titleBar', {read: ElementRef}) public titleBarRef: ElementRef;
-  @ViewChild('itemContentContainer', {read: ViewContainerRef}) public itemContentContainer: ViewContainerRef;
+  @ViewChild('titleBar', {static: true, read: ElementRef}) public titleBarRef: ElementRef;
+  @ViewChild('itemContentContainer', {
+    static: true,
+    read: ViewContainerRef
+  }) public itemContentContainer: ViewContainerRef;
 
   @ViewChildren(NaiscItemPinDirective) public pinRefs: QueryList<NaiscItemPinDirective>;
 

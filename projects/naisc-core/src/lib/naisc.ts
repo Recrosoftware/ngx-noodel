@@ -88,13 +88,13 @@ function transformLinear(start: number, end: number, t: number): number {
 })
 /* tslint:disable-next-line:component-class-suffix */
 export class Naisc implements OnInit, AfterViewInit, OnChanges, OnDestroy {
-  @ViewChild('view', {read: ElementRef})
+  @ViewChild('view', {static: true, read: ElementRef})
   public viewElementRef: ElementRef;
 
-  @ViewChild('itemsContainer', {read: ViewContainerRef})
+  @ViewChild('itemsContainer', {static: true, read: ViewContainerRef})
   public containerRef: ViewContainerRef;
 
-  @ViewChild('overlay', {read: ElementRef})
+  @ViewChild('overlay', {static: true, read: ElementRef})
   public overlayRef: ElementRef;
 
   @Input() public snap: boolean;
